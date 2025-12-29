@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>YAM - Tabela de Pontuação</title>
+
+  <!-- PWA -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#ffffff">
+  <link rel="manifest" href="manifest.json">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h1>YAM – Tabela de Pontuação</h1>
+
+<table>
+  <thead>
+    <tr>
+      <th class="mpb">MPB</th>
+      <th>↓</th>
+      <th>↑</th>
+      <th>D</th>
+      <th>S</th>
+    </tr>
+  </thead>
+
+  <tbody id="tableBody"></tbody>
+
+  <tfoot>
+    <tr class="total-geral">
+      <td class="mpb">TOTAL GERAL</td>
+      <td colspan="4" id="total-geral-final">0</td>
+    </tr>
+  </tfoot>
+</table>
+
+<button onclick="novoJogo()">Novo Jogo</button>
+
+<script src="app.js"></script>
+
+<!-- Service Worker -->
+<script>
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("service-worker.js");
+  }
+</script>
+
+</body>
+</html>
