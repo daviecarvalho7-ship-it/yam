@@ -21,10 +21,9 @@ table {
 
 th, td {
   border: 1px solid #000;
-  padding: 6px;
+  padding: 2px;
   text-align: center;
-  vertical-align: middle;
-  height: 32px;
+  height: 28px;
   font-size: 13px;
 }
 
@@ -37,11 +36,10 @@ thead th {
   width: 45%;
   font-weight: bold;
   text-align: left;
-  padding-left: 8px;
+  padding-left: 6px;
 }
 
-th:not(.mpb),
-td:not(.mpb) {
+th:not(.mpb), td:not(.mpb) {
   width: 13.75%;
 }
 
@@ -67,8 +65,7 @@ tr:nth-child(16) td {
 }
 
 tr:nth-child(16) td {
-  background: #f3f3f3;
-  font-weight: bold;
+  background: #f0f0f0;
 }
 
 tr:nth-child(17) td {
@@ -78,7 +75,6 @@ tr:nth-child(17) td {
 
 .total-geral td {
   border-top: 2px solid #000;
-  background: #e0e0e0;
   font-size: 16px;
   font-weight: bold;
 }
@@ -92,22 +88,3 @@ button {
   background: white;
   cursor: pointer;
 }
-
-.arrow {
-  font-weight: 900;
-  font-size: 1.1em;
-  font-family: Arial, Helvetica, sans-serif;
-  display: inline-block;
-}
-
-@media (max-width: 480px) {
-  table {
-    transform: scale(0.82);
-    transform-origin: top center;
-  }
-
-  body {
-    padding: 4px;
-  }
-}
-
