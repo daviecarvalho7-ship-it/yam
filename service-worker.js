@@ -1,4 +1,4 @@
-const CACHE_NAME = "yam-cache-v3";
+const CACHE_NAME = "yam-cache-v4";
 const FILES_TO_CACHE = [
   "./",
   "./index.html",
@@ -20,5 +20,6 @@ self.addEventListener("fetch", event => {
     })
   );
 });
+
 
 
