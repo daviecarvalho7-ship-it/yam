@@ -99,3 +99,15 @@ button {
   font-family: Arial, Helvetica, sans-serif;
   display: inline-block;
 }
+
+@media (max-width: 480px) {
+  table {
+    transform: scale(0.82);
+    transform-origin: top center;
+  }
+
+  body {
+    padding: 4px;
+  }
+}
+
