@@ -47,8 +47,8 @@ const LEGENDA_LINHAS = [
 
 const LEGENDA_COLUNAS = {
   "MPB": ["MPB", "Nome de cada jogada. Toque em uma linha para ver o que ela significa."],
-  "↓": ["↓ – Descendo", "Preencha de cima para baixo, na ordem."],
-  "↑": ["↑ – Subindo", "Preencha de baixo para cima, na ordem."],
+  "↓": ["↓ – Descida", "Preencha de cima para baixo, na ordem. A casa da vez fica destacada. Riscar (0) pode em qualquer casa."],
+  "↑": ["↑ – Subida", "Começa depois de terminar a descida, de baixo para cima, na ordem. Riscar (0) pode em qualquer casa."],
   "D": ["D – Desordem", "Preencha em qualquer ordem."],
   "S": ["S – Seca", "Vale só o que sair na primeira jogada dos dados."]
 };
@@ -100,6 +100,58 @@ function descreverValores(lista) {
     : lista.join(", ");
 }
 
+// ---------- ordem da descida (↓) e da subida (↑) ----------
+
+// Linhas em que se marca ponto, de cima para baixo (sem os totais).
+const LINHAS_JOGO = [0, 1, 2, 3, 4, 5, 9, 10, 11, 12, 13, 14, 15];
+const COL_DESCIDA = 0;
+const COL_SUBIDA = 1;
+
+const preenchida = (linha, col) => (state[`${linha}-${col}`] ?? "") !== "";
+
+// Próxima casa a jogar numa coluna com ordem, ou null se a coluna acabou.
+function proximaCasa(col) {
+  if (col === COL_DESCIDA) {
+    return LINHAS_JOGO.find(l => !preenchida(l, COL_DESCIDA)) ?? null;
+  }
+  if (col === COL_SUBIDA) {
+    if (proximaCasa(COL_DESCIDA) !== null) return null; // descida ainda não acabou
+    return [...LINHAS_JOGO].reverse().find(l => !preenchida(l, COL_SUBIDA)) ?? null;
+  }
+  return null;
+}
+
+// Mensagem se um ponto (diferente de 0) nesta casa quebra a ordem; senão null.
+// Riscar (0) pode em qualquer casa, a qualquer hora.
+function erroDeOrdem(linha, col) {
+  if (col === COL_DESCIDA) {
+    const anterior = LINHAS_JOGO.slice(0, LINHAS_JOGO.indexOf(linha)).find(l => !preenchida(l, col));
+    if (anterior !== undefined) {
+      return `A descida (↓) é de cima para baixo. A próxima casa é ${rows[anterior]}. Para pular, risque com 0.`;
+    }
+  }
+  if (col === COL_SUBIDA) {
+    const faltaDescida = proximaCasa(COL_DESCIDA);
+    if (faltaDescida !== null) {
+      return `A subida (↑) só começa depois de terminar a descida (↓). Na descida falta ${rows[faltaDescida]}. Riscar com 0 pode a qualquer hora.`;
+    }
+    const abaixo = LINHAS_JOGO.slice(LINHAS_JOGO.indexOf(linha) + 1).reverse().find(l => !preenchida(l, col));
+    if (abaixo !== undefined) {
+      return `A subida (↑) é de baixo para cima. A próxima casa é ${rows[abaixo]}. Para pular, risque com 0.`;
+    }
+  }
+  return null;
+}
+
+// Destaca a próxima casa da descida e da subida.
+function marcarProximas() {
+  body.querySelectorAll("td.proxima").forEach(td => td.classList.remove("proxima"));
+  for (const col of [COL_DESCIDA, COL_SUBIDA]) {
+    const linha = proximaCasa(col);
+    if (linha !== null) body.querySelector(`[data-key="${linha}-${col}"]`).classList.add("proxima");
+  }
+}
+
 // Devolve a mensagem de erro, ou null se o valor pode ficar.
 function validar(key, texto) {
   if (texto === "") return null;
@@ -113,6 +165,11 @@ function validar(key, texto) {
     let msg = `Valores possíveis: ${descreverValores(possiveis)}.`;
     if (linha === 10) msg = `Valores possíveis: 0 ou um destes: ${SOMAS_FULL.join(", ")}.`;
     return [`${valor} não vale em ${nome}`, msg];
+  }
+
+  if (valor !== 0) {
+    const ordem = erroDeOrdem(linha, col);
+    if (ordem) return [`${nome}: fora de ordem`, ordem];
   }
 
   if ((linha === 13 || linha === 14) && valor !== 0) {
@@ -281,6 +338,7 @@ function buildTable() {
 
 function calcular() {
   atualizarTotais(body, totalGeral, state);
+  marcarProximas();
 }
 
 function update(key, value) {

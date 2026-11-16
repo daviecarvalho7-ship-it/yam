@@ -120,12 +120,21 @@
   display: none !important;
 }
 
+/* A página não rola: só a tabela (ou a lista do histórico) rola por dentro.
+   Assim nada passa por trás da hora e da bateria do iPhone, e os botões
+   ficam sempre à vista. As margens "safe-area" desviam da barra de status
+   e da barra de gestos. */
+html {
+  height: 100%;
+}
+
 body {
   margin: 0;
-  /* No iPhone a página vai até atrás da barra de status (hora, bateria);
-     as margens "safe-area" empurram o conteúdo para a área visível. */
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
   padding: calc(12px + env(safe-area-inset-top)) max(10px, env(safe-area-inset-right))
-           90px max(10px, env(safe-area-inset-left));
+           calc(8px + env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   background: var(--fundo);
   color: var(--texto);
@@ -145,31 +154,32 @@ h1 {
   margin: 0 0 10px;
 }
 
-/* Faixa fixa atrás da barra de status do iPhone: esconde a tabela que rola
-   por cima do cabeçalho fixo. Em aparelhos sem essa área, a altura é zero. */
-body::before {
-  content: "";
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: env(safe-area-inset-top);
-  background: var(--fundo);
-  z-index: 5;
+section {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+section > * {
+  flex-shrink: 0;
+  width: 100%;
 }
 
 /* ---------- tabela ---------- */
 
-/* A moldura arredondada fica num bloco em volta da tabela. O "clip" corta os cantos
-   sem atrapalhar o cabeçalho fixo; quando ele gruda no topo, fica com cantos retos
-   e cobre totalmente as linhas que passam por baixo. */
+/* Moldura da tabela e área que rola. Ocupa o espaço que sobrar na tela. */
 .tabela {
+  flex: 0 1 auto;
+  min-height: 0;
+  width: 100%;
   max-width: 700px;
   margin: 0 auto;
   background: var(--superficie);
   border: 2px solid var(--borda-forte);
   border-radius: 10px;
-  overflow: clip;
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 table {
@@ -201,10 +211,10 @@ th:last-child, td:last-child {
   line-height: 1.15;
 }
 
-/* cabeçalho fixo ao rolar */
+/* cabeçalho fixo ao rolar (dentro da moldura) */
 thead th {
   position: sticky;
-  top: env(safe-area-inset-top);
+  top: 0;
   z-index: 1;
   background: var(--destaque);
   color: var(--destaque-texto);
@@ -213,21 +223,6 @@ thead th {
   border-bottom: 2px solid var(--borda-forte);
   border-right-color: rgba(255, 255, 255, 0.25);
   cursor: pointer;
-}
-
-/* Faixa da cor do fundo logo acima do cabeçalho. Quando ele gruda no topo,
-   ela cobre as linhas que passariam por cima dele (no iPhone, essa área fica
-   atrás da hora e da bateria). Com a tabela parada, a moldura (.tabela) corta
-   a faixa e ela não aparece. */
-thead th::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: -1px;
-  bottom: 100%;
-  height: 150px;
-  background: var(--fundo);
-  pointer-events: none;
 }
 
 tbody td.mpb {
@@ -258,6 +253,12 @@ input:focus {
   box-shadow: inset 0 0 0 2px var(--foco);
 }
 
+/* próxima casa da descida (↓) e da subida (↑) */
+tbody tr td.proxima {
+  background: color-mix(in srgb, var(--foco) 28%, var(--superficie));
+  box-shadow: inset 0 0 0 2px var(--foco);
+}
+
 /* seções */
 tr.numeros td { background: var(--numeros); }
 tr.combos td  { background: var(--combos); }
@@ -277,6 +278,13 @@ tr.fim-secao td {
 }
 
 /* total geral em destaque */
+/* fica fixo embaixo, sempre à vista enquanto a tabela rola */
+.total-geral td {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+}
+
 .total-geral td {
   height: 52px;
   background: var(--destaque);
@@ -322,7 +330,7 @@ button.perigo {
   display: flex;
   justify-content: center;
   gap: 10px;
-  margin: 16px auto;
+  margin: 12px auto 0;
 }
 
 /* ---------- histórico ---------- */
@@ -382,6 +390,10 @@ button.perigo {
 }
 
 .lista-historico {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow: auto;
+  width: 100%;
   list-style: none;
   max-width: 700px;
   margin: 0 auto;
