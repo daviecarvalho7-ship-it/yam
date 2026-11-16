@@ -492,3 +492,15 @@ button.perigo {
 tbody tr td.piscar {
   animation: piscar 0.5s ease-in-out 3;
 }
+
+/* botão dentro do aviso (ex.: Riscar esta casa) */
+.acao-legenda {
+  display: block;
+  margin-top: 10px;
+  padding: 8px 14px;
+  border: 2px solid currentColor;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font-weight: bold;
+}

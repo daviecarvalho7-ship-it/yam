@@ -47,7 +47,7 @@ const LEGENDA_LINHAS = [
 
 const LEGENDA_COLUNAS = {
   "MPB": ["MPB", "Nome de cada jogada. Toque em uma linha para ver o que ela significa."],
-  "↓": ["↓ – Descida", "Preencha de cima para baixo, na ordem. A casa da vez fica destacada. Para riscar, digite 0 (aparece —): pode em qualquer casa."],
+  "↓": ["↓ – Descida", "Preencha de cima para baixo, na ordem. A casa da vez fica destacada. Para riscar, digite 0 (aparece —): pode em qualquer casa; nas casas fora da vez, use o botão “Riscar esta casa”."],
   "↑": ["↑ – Subida", "Começa depois de terminar a descida, de baixo para cima, na ordem. Para riscar, digite 0 (aparece —): pode em qualquer casa."],
   "D": ["D – Desordem", "Preencha em qualquer ordem."],
   "S": ["S – Seca", "Vale só o que sair na primeira jogada dos dados."]
@@ -57,10 +57,15 @@ let timerLegenda = null;
 let ultimoAviso = 0;
 
 // tipo: "" (legenda), "aviso" (casa fora da vez) ou "erro" (valor recusado).
-function mostrarLegenda([titulo, texto], tipo = "") {
+// acao (opcional): { texto, fazer } mostra um botão dentro da caixa.
+function mostrarLegenda([titulo, texto], tipo = "", acao = null) {
   const caixa = document.getElementById("legenda");
   caixa.querySelector("strong").textContent = titulo;
   caixa.querySelector("span").textContent = texto;
+  const botao = caixa.querySelector("button");
+  botao.hidden = !acao;
+  botao.onclick = acao ? () => { caixa.hidden = true; acao.fazer(); } : null;
+  if (acao) botao.textContent = acao.texto;
   caixa.classList.toggle("erro", tipo === "erro");
   caixa.classList.toggle("aviso", tipo === "aviso");
   caixa.hidden = false;
@@ -164,7 +169,7 @@ function nomeDaCasa(key) {
 // pode riscar); senão, tentou marcar ponto e o valor foi recusado.
 function mensagemDeOrdem(problema, aoTocar) {
   const fim = aoTocar
-    ? "Aqui você só pode riscar (digite 0)."
+    ? "Aqui você só pode riscar."
     : "Para pular uma casa, risque com 0.";
   return ["Não é a vez desta casa", `${problema.motivo} Preencha em ${nomeDaCasa(problema.certa)}. ${fim}`, problema.certa];
 }
@@ -191,7 +196,20 @@ function marcarProximas() {
     if (linha !== null) body.querySelector(`[data-key="${linha}-${col}"]`).classList.add("proxima");
     const completa = linha === null && (col === COL_DESCIDA || descidaAcabou);
     cabecalhos[col + 1].classList.toggle("completa", completa);
+
+    // Casa vazia fora da vez: só-leitura, para o teclado não abrir ao tocar.
+    for (const l of LINHAS_JOGO) {
+      const input = body.querySelector(`[data-key="${l}-${col}"] input`);
+      if (input) input.readOnly = !preenchida(l, col) && problemaDeOrdem(l, col) !== null;
+    }
   }
+}
+
+// O número digitado já está completo? (nenhum valor aceito nesta linha
+// começa com ele e é mais longo). Ex.: na linha do 4, "2" espera o "20".
+function numeroCompleto(linha, texto) {
+  if (texto === "") return false;
+  return !valoresPossiveis(linha).map(String).some(v => v.length > texto.length && v.startsWith(texto));
 }
 
 const RISCO = "—";
@@ -371,8 +389,15 @@ function montarTabela(tbody, valores, editavel) {
             if (caixa.classList.contains("aviso")) caixa.hidden = true;
             return;
           }
+          input.blur(); // fecha o teclado
           ultimoAviso = Date.now();
-          mostrarLegenda(mensagemDeOrdem(problema, true), "aviso");
+          mostrarLegenda(mensagemDeOrdem(problema, true), "aviso", {
+            texto: "Riscar esta casa",
+            fazer: () => {
+              input.value = exibir("0");
+              update(key, "0");
+            }
+          });
           piscarCasa(problema.certa);
         });
 
@@ -380,6 +405,7 @@ function montarTabela(tbody, valores, editavel) {
           const limpo = input.value.replace(/\D/g, "");
           if (limpo !== input.value) input.value = limpo;
           update(key, limpo);
+          if (numeroCompleto(Number(key.split("-")[0]), limpo)) input.blur();
         });
 
         // Ao terminar de digitar (sair da casa): apaga se for impossível;
