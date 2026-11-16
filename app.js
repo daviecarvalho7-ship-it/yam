@@ -7,6 +7,78 @@ const rows = [
 ];
 const COLUNAS = 4;
 
+// Classes de cada linha (cor da seção e linha grossa no fim de cada bloco).
+const CLASSES_LINHA = {
+  5: "numeros fim-secao",
+  6: "total",
+  7: "total",
+  8: "total fim-secao",
+  15: "combos fim-secao",
+  16: "total",
+  17: "total-forte"
+};
+
+function classesDaLinha(i) {
+  if (CLASSES_LINHA[i]) return CLASSES_LINHA[i];
+  return i < 6 ? "numeros" : "combos";
+}
+
+// Explicação de cada linha e coluna, mostrada ao tocar no nome.
+const LEGENDA_LINHAS = [
+  ["Uns (1)", "Some os dados que caíram 1. Referência: 2 pontos."],
+  ["Dois (2)", "Some os dados que caíram 2. Referência: 4 pontos."],
+  ["Três (3)", "Some os dados que caíram 3. Referência: 9 pontos."],
+  ["Quatros (4)", "Some os dados que caíram 4. Referência: 12 pontos."],
+  ["Cincos (5)", "Some os dados que caíram 5. Referência: 15 pontos."],
+  ["Seis (6)", "Some os dados que caíram 6. Referência: 18 pontos."],
+  ["1º total", "Soma das seis linhas de cima. As referências somam 60, o necessário para o bônus."],
+  ["Bônus", "Ganha 30 pontos se o 1º total for 60 ou mais."],
+  ["2º total", "1º total + bônus."],
+  ["Q – Quadra", "Quatro dados iguais."],
+  ["F – Full", "Uma trinca e um par (ex.: 3-3-3-5-5)."],
+  ["S- – Sequência baixa", "1-2-3-4-5."],
+  ["S+ – Sequência alta", "2-3-4-5-6."],
+  ["X MIN – Mínimo", "Soma dos cinco dados, tentando fazer o menor valor."],
+  ["X MAX – Máximo", "Soma dos cinco dados, tentando fazer o maior valor."],
+  ["YAM", "Os cinco dados iguais."],
+  ["3º total", "Soma das linhas de Quadra até YAM."],
+  ["2º + 3º total", "Total da coluna."]
+];
+
+const LEGENDA_COLUNAS = {
+  "MPB": ["MPB", "Nome de cada jogada. Toque em uma linha para ver o que ela significa."],
+  "↓": ["↓ – Descendo", "Preencha de cima para baixo, na ordem."],
+  "↑": ["↑ – Subindo", "Preencha de baixo para cima, na ordem."],
+  "D": ["D – Desordem", "Preencha em qualquer ordem."],
+  "S": ["S – Seca", "Vale só o que sair na primeira jogada dos dados."]
+};
+
+let timerLegenda = null;
+
+function mostrarLegenda([titulo, texto]) {
+  const caixa = document.getElementById("legenda");
+  caixa.querySelector("strong").textContent = titulo;
+  caixa.querySelector("span").textContent = texto;
+  caixa.hidden = false;
+  clearTimeout(timerLegenda);
+  timerLegenda = setTimeout(() => { caixa.hidden = true; }, 5000);
+}
+
+document.addEventListener("click", evento => {
+  const alvo = evento.target;
+  const linha = alvo.closest("tbody td.mpb");
+  const coluna = alvo.closest("thead th");
+
+  if (linha) {
+    mostrarLegenda(LEGENDA_LINHAS[Number(linha.dataset.linha)]);
+  } else if (coluna) {
+    const legenda = LEGENDA_COLUNAS[coluna.textContent.trim()];
+    if (legenda) mostrarLegenda(legenda);
+  } else if (!alvo.closest("#legenda")) {
+    document.getElementById("legenda").hidden = true;
+  }
+});
+
 const CHAVE_JOGO = "yam";
 const CHAVE_HISTORICO = "yam-historico";
 
@@ -82,10 +154,11 @@ function montarTabela(tbody, valores, editavel) {
   rows.forEach((label, rowIndex) => {
     const tr = document.createElement("tr");
     const calculada = ehLinhaCalculada(label);
-    if (calculada) tr.classList.add("block");
+    tr.className = classesDaLinha(rowIndex);
 
     const tdLabel = document.createElement("td");
     tdLabel.className = "mpb";
+    tdLabel.dataset.linha = rowIndex;
     tdLabel.textContent = label;
     tr.appendChild(tdLabel);
 
