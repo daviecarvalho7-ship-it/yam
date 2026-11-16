@@ -602,3 +602,34 @@ tbody tr td.piscar {
 @keyframes cair {
   to { transform: translateY(110vh) rotate(720deg); opacity: 0.8; }
 }
+
+/* ---------- quanto falta para o bônus ---------- */
+
+.dica-bonus {
+  display: block;
+  margin-top: 1px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--texto-suave);
+  white-space: nowrap;
+}
+
+.dica-bonus.perdido {
+  color: var(--perigo);
+  opacity: 0.8;
+}
+
+tr.total td.bonus-ok {
+  color: #2e7d32;
+}
+
+:root[data-theme="dark"] tr.total td.bonus-ok {
+  color: #7bd17f;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) tr.total td.bonus-ok {
+    color: #7bd17f;
+  }
+}

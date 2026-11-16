@@ -32,7 +32,7 @@ const LEGENDA_LINHAS = [
   ["Cincos (5)", "Some os dados que caíram 5. Referência: 15 pontos."],
   ["Seis (6)", "Some os dados que caíram 6. Referência: 18 pontos."],
   ["1º total", "Soma das seis linhas de cima. As referências somam 60, o necessário para o bônus."],
-  ["Bônus", "Ganha 30 pontos se o 1º total for 60 ou mais."],
+  ["Bônus", "Ganha 30 pontos se o 1º total for 60 ou mais. Embaixo do valor aparece quanto ainda falta, ou \"sem bônus\" quando não dá mais para chegar a 60 nem fazendo o máximo nas casas que sobraram."],
   ["2º total", "1º total + bônus."],
   ["Q – Quadra", "Quatro dados iguais. Vale 20 + a soma dos quatro (ex.: quatro 5 = 40)."],
   ["F – Full", "Uma trinca e um par (ex.: 3-3-3-5-5). Vale 30 + a soma dos dados."],
@@ -446,6 +446,39 @@ function atualizarTotais(tbody, totalCell, valores) {
   }
   totalCell.textContent = geral;
   marcarRiscados(tbody, valores);
+  mostrarFaltaBonus(tbody, valores);
+}
+
+// ---------- quanto falta para o bônus ----------
+
+const META_BONUS = 60;
+
+// Texto curto para a casa do bônus de uma coluna: "falta 12", "sem bônus"
+// (nem com o máximo nas casas que sobraram dá para chegar a 60) ou null
+// quando o bônus já foi conquistado.
+function situacaoBonus(valores, col) {
+  const total1 = somaColuna(valores, col, 0, 5);
+  if (total1 >= META_BONUS) return null;
+
+  const maximoQueFalta = [0, 1, 2, 3, 4, 5]
+    .filter(l => (valores[`${l}-${col}`] ?? "") === "")
+    .reduce((soma, l) => soma + 5 * (l + 1), 0);
+
+  if (total1 + maximoQueFalta < META_BONUS) return { texto: "sem bônus", perdido: true };
+  return { texto: `falta ${META_BONUS - total1}`, perdido: false };
+}
+
+function mostrarFaltaBonus(tbody, valores) {
+  for (let col = 0; col < COLUNAS; col++) {
+    const td = tbody.querySelector(`[data-key="7-${col}"]`);
+    const situacao = situacaoBonus(valores, col);
+    td.classList.toggle("bonus-ok", situacao === null);
+    if (!situacao) continue;
+    const dica = document.createElement("small");
+    dica.className = situacao.perdido ? "dica-bonus perdido" : "dica-bonus";
+    dica.textContent = situacao.texto;
+    td.appendChild(dica);
+  }
 }
 
 // ---------- jogo atual ----------
