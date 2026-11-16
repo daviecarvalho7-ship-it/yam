@@ -454,7 +454,7 @@ button.perigo {
 .legenda {
   position: fixed;
   left: 50%;
-  bottom: calc(16px + env(safe-area-inset-bottom));
+  bottom: calc(76px + env(safe-area-inset-bottom)); /* acima dos botões de baixo */
   transform: translateX(-50%);
   width: calc(100% - 32px);
   max-width: 480px;
@@ -683,4 +683,28 @@ tr.total td.bonus-ok {
   padding: 4px 12px;
   font-size: 14px;
   border-width: 1px;
+}
+
+/* ---------- desfazer ---------- */
+
+button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+#tela-jogo .acoes {
+  gap: 8px;
+}
+
+#tela-jogo .acoes button {
+  padding: 10px 14px;
+}
+
+/* O aviso não bloqueia toques nos botões de baixo; só o botão dentro dele é clicável. */
+.legenda {
+  pointer-events: none;
+}
+
+.legenda .acao-legenda {
+  pointer-events: auto;
 }

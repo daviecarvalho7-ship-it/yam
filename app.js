@@ -379,7 +379,11 @@ function montarTabela(tbody, valores, editavel) {
 
         // Ao tocar, seleciona o conteúdo: digitar já substitui o valor ou o risco.
         // Se não é a vez desta casa (↓ ou ↑), já avisa o motivo e mostra a certa.
+        // valor da casa antes desta edição (para o "Desfazer")
+        let antes = "";
+
         input.addEventListener("focus", () => {
+          antes = state[key] ?? "";
           input.select();
           const [linha, col] = key.split("-").map(Number);
           const problema = input.value === "" ? problemaDeOrdem(linha, col) : null;
@@ -394,6 +398,7 @@ function montarTabela(tbody, valores, editavel) {
           mostrarLegenda(mensagemDeOrdem(problema, true), "aviso", {
             texto: "Riscar esta casa",
             fazer: () => {
+              registrarJogada(key, "", "0");
               input.value = exibir("0");
               update(key, "0");
               verificarFimDeJogo();
@@ -414,6 +419,7 @@ function montarTabela(tbody, valores, editavel) {
         input.addEventListener("change", () => {
           const erro = validar(key, input.value);
           if (erro) {
+            registrarJogada(key, antes);
             input.value = "";
             update(key, "");
             ultimoAviso = Date.now();
@@ -421,8 +427,12 @@ function montarTabela(tbody, valores, editavel) {
             if (erro[2]) piscarCasa(erro[2]);
             return;
           }
-          if (input.value === "") return;
+          if (input.value === "") {
+            registrarJogada(key, antes);
+            return;
+          }
           const numero = String(Number(input.value));
+          registrarJogada(key, antes, numero);
           input.value = exibir(numero);
           update(key, numero);
           verificarFimDeJogo();
@@ -736,6 +746,7 @@ function fecharFimDeJogo() {
 function comecarNovaPartida() {
   state = {};
   salvar();
+  limparJogadas();
   guardarPartidaSalvaId(null);
   buildTable();
   fecharFimDeJogo();
@@ -853,6 +864,57 @@ function excluirPartida() {
   abrirHistorico();
 }
 
+// ---------- desfazer ----------
+
+const CHAVE_JOGADAS = "yam-jogadas";
+const MAX_JOGADAS = 30;
+let jogadas = ler(CHAVE_JOGADAS, []);  // [{ key, antes }], a última no fim
+
+// Guarda o que a casa tinha antes da mudança. `depois` evita registrar
+// quando nada mudou (ex.: tocou e saiu sem alterar).
+function registrarJogada(key, antes, depois = "") {
+  if ((antes ?? "") === (depois ?? "")) return;
+  jogadas.push({ key, antes: antes ?? "" });
+  if (jogadas.length > MAX_JOGADAS) jogadas.shift();
+  localStorage.setItem(CHAVE_JOGADAS, JSON.stringify(jogadas));
+  atualizarBotaoDesfazer();
+}
+
+function limparJogadas() {
+  jogadas = [];
+  localStorage.removeItem(CHAVE_JOGADAS);
+  atualizarBotaoDesfazer();
+}
+
+function atualizarBotaoDesfazer() {
+  document.getElementById("botao-desfazer").disabled = jogadas.length === 0;
+}
+
+const NOMES_COLUNAS = ["descida (↓)", "subida (↑)", "coluna D", "coluna S"];
+
+function desfazer() {
+  const jogada = jogadas.pop();
+  if (!jogada) return;
+  localStorage.setItem(CHAVE_JOGADAS, JSON.stringify(jogadas));
+
+  const desfeito = state[jogada.key] ?? "";
+  if (jogada.antes === "") delete state[jogada.key];
+  else state[jogada.key] = jogada.antes;
+  salvar();
+  buildTable();
+  atualizarBotaoDesfazer();
+
+  // se a partida já tinha sido salva ao terminar, mantém o histórico em dia
+  if (entradaDaPartidaAtual() && partidaCompleta()) salvarPartidaAtual();
+
+  const [linha, col] = jogada.key.split("-").map(Number);
+  const de = exibir(desfeito) || "vazia";
+  const para = exibir(jogada.antes) || "vazia";
+  ultimoAviso = Date.now();
+  mostrarLegenda(["Desfeito", `${rows[linha]} na ${NOMES_COLUNAS[col]}: ${de} → ${para}.`]);
+  piscarCasa(jogada.key);
+}
+
 // ---------- tema claro / escuro ----------
 
 const sistemaEscuro = window.matchMedia("(prefers-color-scheme: dark)");
@@ -880,6 +942,7 @@ function alternarTema() {
 
 sistemaEscuro.addEventListener("change", atualizarBotaoTema);
 atualizarBotaoTema();
+atualizarBotaoDesfazer();
 
 // ---------- backup do histórico ----------
 
