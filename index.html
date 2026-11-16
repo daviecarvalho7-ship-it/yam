@@ -27,6 +27,7 @@
 <!-- Jogo atual -->
 <section id="tela-jogo">
   <div class="barra">
+    <button class="convidar" onclick="convidarJogadores()">📲 Convidar</button>
     <button id="botao-tema" class="tema" role="switch" aria-checked="false"
             aria-label="Modo escuro" onclick="alternarTema()">
       <span aria-hidden="true">☀️</span>
@@ -126,6 +127,7 @@
   </div>
 
   <div class="acoes">
+    <button onclick="compartilharPartidaAberta()">📤 Compartilhar</button>
     <button class="perigo" onclick="excluirPartida()">Excluir partida</button>
   </div>
 </section>
@@ -143,6 +145,7 @@
       <button class="principal" onclick="comecarNovaPartida()">Nova partida</button>
       <button onclick="fecharFimDeJogo()">Ver tabela</button>
     </div>
+    <button class="compartilhar" onclick="compartilharFimDeJogo()">📤 Compartilhar resultado</button>
   </div>
   <div id="confete" class="confete" aria-hidden="true"></div>
 </div>

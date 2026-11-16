@@ -560,11 +560,173 @@ function mostrarFimDeJogo(recordeAnterior) {
   document.getElementById("fim-colunas").textContent =
     ["↓", "↑", "D", "S"].map((c, col) => `${c} ${calculados[`17-${col}`]}`).join("  ·  ");
 
+  ultimoResultado = { valores: { ...state }, total: geral, data: new Date().toISOString(), novoRecorde };
+
   const caixa = document.getElementById("fim-de-jogo");
   caixa.classList.toggle("recorde", novoRecorde);
   caixa.hidden = false;
   document.getElementById("legenda").hidden = true;
   if (novoRecorde) soltarConfete();
+}
+
+// ---------- compartilhar resultado (imagem) ----------
+
+let ultimoResultado = null;
+const ENDERECO_APP = new URL(".", location.href).href;
+
+function retanguloArredondado(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+// Desenha o cartão do resultado (1080 x 1350, bom para WhatsApp) e devolve um PNG.
+function gerarImagemResultado(valores, total, dataIso, selo) {
+  const { calculados } = calcularTotais(valores);
+  const bonus = [0, 1, 2, 3].filter(col => calculados[`7-${col}`] > 0).length;
+  const yams = [0, 1, 2, 3].filter(col => Number(valores[`15-${col}`]) > 0).length;
+  const data = new Date(dataIso).toLocaleDateString("pt-BR");
+
+  const W = 1080, H = 1350;
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d");
+  const fonte = (peso, tam) => `${peso} ${tam}px system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif`;
+  const NAVY = "#1f3a5f", FUNDO = "#f3f3f0", TEXTO = "#1d1d1f", SUAVE = "#66666a", AMBAR = "#f2b134";
+
+  ctx.fillStyle = FUNDO;
+  ctx.fillRect(0, 0, W, H);
+
+  // faixa do topo com o dado e o nome
+  ctx.fillStyle = NAVY;
+  ctx.fillRect(0, 0, W, 330);
+  const dado = 120, dx = W / 2 - 190, dy = 85;
+  ctx.fillStyle = "#ffffff";
+  retanguloArredondado(ctx, dx, dy, dado, dado, 24);
+  ctx.fill();
+  ctx.fillStyle = NAVY;
+  const o = dado * 0.27, r = dado * 0.085;
+  for (const [px, py] of [[-o, -o], [o, -o], [0, 0], [-o, o], [o, o]]) {
+    ctx.beginPath();
+    ctx.arc(dx + dado / 2 + px, dy + dado / 2 + py, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.fillStyle = "#ffffff";
+  ctx.textBaseline = "middle";
+  ctx.textAlign = "left";
+  ctx.font = fonte(800, 120);
+  ctx.fillText("YAM", dx + dado + 40, dy + dado / 2 + 6);
+  ctx.textAlign = "center";
+  ctx.font = fonte(500, 40);
+  ctx.fillStyle = "rgba(255,255,255,0.8)";
+  ctx.fillText(data, W / 2, 275);
+
+  // total
+  ctx.fillStyle = selo ? "#c98a00" : NAVY;
+  ctx.font = fonte(800, 250);
+  ctx.fillText(String(total), W / 2, 540);
+  ctx.fillStyle = SUAVE;
+  ctx.font = fonte(500, 52);
+  ctx.fillText("pontos", W / 2, 680);
+
+  // selo de recorde
+  if (selo) {
+    ctx.font = fonte(700, 46);
+    const largura = ctx.measureText(selo).width + 80;
+    ctx.fillStyle = AMBAR;
+    retanguloArredondado(ctx, (W - largura) / 2, 735, largura, 84, 42);
+    ctx.fill();
+    ctx.fillStyle = TEXTO;
+    ctx.fillText(selo, W / 2, 779);
+  }
+
+  // total de cada coluna
+  const rotulos = ["↓", "↑", "D", "S"];
+  const caixa = 210, gap = 30, x0 = (W - (4 * caixa + 3 * gap)) / 2, y0 = 880;
+  rotulos.forEach((rotulo, col) => {
+    const x = x0 + col * (caixa + gap);
+    ctx.fillStyle = "#ffffff";
+    retanguloArredondado(ctx, x, y0, caixa, 210, 28);
+    ctx.fill();
+    ctx.strokeStyle = "#c8c8c4";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.fillStyle = SUAVE;
+    ctx.font = fonte(700, 52);
+    ctx.fillText(rotulo, x + caixa / 2, y0 + 60);
+    ctx.fillStyle = NAVY;
+    ctx.font = fonte(800, 78);
+    ctx.fillText(String(calculados[`17-${col}`]), x + caixa / 2, y0 + 145);
+  });
+
+  // resumo
+  ctx.fillStyle = TEXTO;
+  ctx.font = fonte(600, 46);
+  ctx.fillText(`Bônus em ${bonus} de 4 colunas  ·  ${yams} YAM${yams === 1 ? "" : "s"}`, W / 2, 1200);
+
+  return new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+}
+
+// Compartilha a imagem (WhatsApp, etc.); se o celular não deixar, baixa o arquivo.
+async function compartilharImagem(blob, dataIso) {
+  const nome = `yam-${new Date(dataIso).toISOString().slice(0, 10)}.png`;
+  const arquivo = new File([blob], nome, { type: "image/png" });
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [arquivo] })) {
+      await navigator.share({ files: [arquivo] });
+      return;
+    }
+  } catch (erro) {
+    if (erro && erro.name === "AbortError") return; // cancelou
+  }
+  const url = URL.createObjectURL(arquivo);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = nome;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function compartilharFimDeJogo() {
+  if (!ultimoResultado) return;
+  const r = ultimoResultado;
+  const blob = await gerarImagemResultado(r.valores, r.total, r.data, r.novoRecorde ? "🏆 Novo recorde!" : "");
+  await compartilharImagem(blob, r.data);
+}
+
+async function compartilharPartidaAberta() {
+  if (!partidaAberta) return;
+  const p = partidaAberta;
+  const ehRecorde = historico.length > 1 && p.total === Math.max(...historico.map(h => h.total));
+  const blob = await gerarImagemResultado(p.valores, p.total, p.data, ehRecorde ? "🏆 Meu recorde!" : "");
+  await compartilharImagem(blob, p.data);
+}
+
+// Convite para novos jogadores: só o link do app.
+async function convidarJogadores() {
+  const texto = "Vem jogar YAM com a gente! Marque os pontos por aqui:";
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: "YAM", text: texto, url: ENDERECO_APP });
+      return;
+    }
+  } catch (erro) {
+    if (erro && erro.name === "AbortError") return;
+  }
+  try {
+    await navigator.clipboard.writeText(`${texto} ${ENDERECO_APP}`);
+    ultimoAviso = Date.now();
+    mostrarLegenda(["Link copiado", "Agora é só colar no WhatsApp."]);
+  } catch {
+    prompt("Copie o link do app:", ENDERECO_APP);
+  }
 }
 
 function fecharFimDeJogo() {

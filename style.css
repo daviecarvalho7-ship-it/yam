@@ -69,7 +69,8 @@
 
 .barra {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   max-width: 700px;
   margin: 0 auto;
 }
@@ -655,4 +656,31 @@ tr.total td.bonus-ok {
 
 .backup .acoes {
   margin: 8px auto;
+}
+
+/* ---------- compartilhar ---------- */
+
+.fim-caixa .compartilhar {
+  margin-top: 12px;
+  width: 100%;
+  border-color: #25a244;
+  color: #1b7a33;
+  font-weight: 600;
+}
+
+:root[data-theme="dark"] .fim-caixa .compartilhar {
+  color: #6fd38a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .fim-caixa .compartilhar {
+    color: #6fd38a;
+  }
+}
+
+/* botão de convidar jogadores (link do app) */
+.convidar {
+  padding: 4px 12px;
+  font-size: 14px;
+  border-width: 1px;
 }
