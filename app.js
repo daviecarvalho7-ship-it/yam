@@ -47,8 +47,8 @@ const LEGENDA_LINHAS = [
 
 const LEGENDA_COLUNAS = {
   "MPB": ["MPB", "Nome de cada jogada. Toque em uma linha para ver o que ela significa."],
-  "↓": ["↓ – Descida", "Preencha de cima para baixo, na ordem. A casa da vez fica destacada. Riscar (0) pode em qualquer casa."],
-  "↑": ["↑ – Subida", "Começa depois de terminar a descida, de baixo para cima, na ordem. Riscar (0) pode em qualquer casa."],
+  "↓": ["↓ – Descida", "Preencha de cima para baixo, na ordem. A casa da vez fica destacada. Para riscar, digite 0 (aparece —): pode em qualquer casa."],
+  "↑": ["↑ – Subida", "Começa depois de terminar a descida, de baixo para cima, na ordem. Para riscar, digite 0 (aparece —): pode em qualquer casa."],
   "D": ["D – Desordem", "Preencha em qualquer ordem."],
   "S": ["S – Seca", "Vale só o que sair na primeira jogada dos dados."]
 };
@@ -155,6 +155,14 @@ function marcarProximas() {
     const completa = linha === null && (col === COL_DESCIDA || descidaAcabou);
     cabecalhos[col + 1].classList.toggle("completa", completa);
   }
+}
+
+const RISCO = "—";
+
+// Texto mostrado na casa: vazio, o número, ou "—" quando riscada (valor 0).
+function exibir(valor) {
+  if (valor === undefined || valor === null || valor === "") return "";
+  return Number(valor) === 0 ? RISCO : String(Number(valor));
 }
 
 // Marca as casas riscadas (valor 0) para ficarem com visual próprio.
@@ -305,23 +313,43 @@ function montarTabela(tbody, valores, editavel) {
       td.dataset.key = key;
 
       if (!calculada && editavel) {
+        // Campo de texto com teclado numérico: permite mostrar o risco como "—"
+        // e limitar a 2 dígitos (o maior valor possível é 80).
         const input = document.createElement("input");
-        input.type = "number";
+        input.type = "text";
         input.inputMode = "numeric";
-        input.value = valores[key] ?? "";
-        input.addEventListener("input", () => update(key, input.value));
-        // Ao terminar de digitar (sair da casa), apaga o valor se ele for impossível.
+        input.maxLength = 2;
+        input.autocomplete = "off";
+        input.value = exibir(valores[key]);
+
+        // Ao tocar, seleciona o conteúdo: digitar já substitui o valor ou o risco.
+        input.addEventListener("focus", () => input.select());
+
+        input.addEventListener("input", () => {
+          const limpo = input.value.replace(/\D/g, "");
+          if (limpo !== input.value) input.value = limpo;
+          update(key, limpo);
+        });
+
+        // Ao terminar de digitar (sair da casa): apaga se for impossível;
+        // senão guarda o número sem zeros à esquerda e mostra 0 como "—".
         input.addEventListener("change", () => {
           const erro = validar(key, input.value);
-          if (!erro) return;
-          input.value = "";
-          update(key, "");
-          ultimoAviso = Date.now();
-          mostrarLegenda(erro, true);
+          if (erro) {
+            input.value = "";
+            update(key, "");
+            ultimoAviso = Date.now();
+            mostrarLegenda(erro, true);
+            return;
+          }
+          if (input.value === "") return;
+          const numero = String(Number(input.value));
+          input.value = exibir(numero);
+          update(key, numero);
         });
         td.appendChild(input);
       } else if (!calculada) {
-        td.textContent = valores[key] ?? "";
+        td.textContent = exibir(valores[key]);
       }
 
       tr.appendChild(td);

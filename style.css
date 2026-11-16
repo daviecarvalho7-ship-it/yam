@@ -134,6 +134,7 @@
    e da barra de gestos. */
 html {
   height: 100%;
+  overscroll-behavior: none;
 }
 
 body {
@@ -186,7 +187,7 @@ section > * {
   border: 2px solid var(--borda-forte);
   border-radius: 10px;
   overflow: auto;
-  overscroll-behavior: contain;
+  overscroll-behavior: none; /* sem o "elástico" ao puxar no iPhone */
   -webkit-overflow-scrolling: touch;
 }
 
