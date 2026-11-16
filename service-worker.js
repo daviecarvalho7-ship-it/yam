@@ -1,5 +1,5 @@
 // Ao publicar mudanças, aumente a versão para limpar o cache antigo.
-const CACHE_NAME = "yam-cache-v15";
+const CACHE_NAME = "yam-cache-v16";
 const FILES_TO_CACHE = [
   "./",
   "./index.html",
@@ -7,7 +7,10 @@ const FILES_TO_CACHE = [
   "./app.js",
   "./manifest.json",
   "./icon-192.png",
-  "./icon-512.png"
+  "./icon-512.png",
+  "./icon-maskable-512.png",
+  "./apple-touch-icon.png",
+  "./favicon-32.png"
 ];
 
 self.addEventListener("install", event => {
