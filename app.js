@@ -783,7 +783,7 @@ function novoJogo() {
 
 // ---------- telas ----------
 
-const telas = ["tela-jogo", "tela-historico", "tela-partida"];
+const telas = ["tela-jogo", "tela-historico", "tela-partida", "tela-estatisticas"];
 
 function mostrarTela(id) {
   telas.forEach(t => { document.getElementById(t).hidden = t !== id; });
@@ -862,6 +862,213 @@ function excluirPartida() {
   salvarHistorico();
   partidaAberta = null;
   abrirHistorico();
+}
+
+// ---------- estatísticas ----------
+
+// Sigla de cada casa como na tabela, sem o número de pontos na frente
+// ("50 YAM" -> "YAM", "40 S+" -> "S+", "2 / 1" -> "1", "X MIN" fica igual).
+const siglaDaCasa = linha => rows[linha].replace(/^\d+\s*(\/\s*)?/, "");
+
+const partidaEstaCompleta = valores =>
+  LINHAS_JOGO.every(l => [0, 1, 2, 3].every(col => (valores[`${l}-${col}`] ?? "") !== ""));
+
+function elemento(tag, classe, texto) {
+  const el = document.createElement(tag);
+  if (classe) el.className = classe;
+  if (texto !== undefined) el.textContent = texto;
+  return el;
+}
+
+function bloco(titulo, subtitulo) {
+  const b = elemento("div", "bloco");
+  b.appendChild(elemento("h2", "", titulo));
+  if (subtitulo) b.appendChild(elemento("p", "subtitulo", subtitulo));
+  return b;
+}
+
+function abrirEstatisticas() {
+  const area = document.getElementById("estatisticas");
+  area.innerHTML = "";
+
+  if (historico.length === 0) {
+    area.appendChild(elemento("p", "vazio", "Ainda não há partidas salvas. Termine uma partida para ver suas estatísticas aqui."));
+    mostrarTela("tela-estatisticas");
+    return;
+  }
+
+  // só partidas completas: as abandonadas no meio distorcem totais e médias
+  const cronologico = [...historico].sort((a, b) => a.data.localeCompare(b.data));
+  const completas = cronologico.filter(p => partidaEstaCompleta(p.valores));
+  const fora = cronologico.length - completas.length;
+  const aviso = fora === 0 ? "" :
+    `Considerando as ${completas.length} partidas completas (${fora} incompleta${fora === 1 ? "" : "s"} não entra${fora === 1 ? "" : "m"}).`;
+
+  if (completas.length === 0) {
+    area.appendChild(elemento("p", "vazio", "As estatísticas aparecem quando houver uma partida completa salva."));
+    mostrarTela("tela-estatisticas");
+    return;
+  }
+
+  const totais = completas.map(p => p.total);
+  const media = Math.round(totais.reduce((a, b) => a + b, 0) / totais.length);
+
+  // números principais
+  const numeros = elemento("div", "numeros-estat");
+  [["partidas", totais.length], ["média", media], ["recorde", Math.max(...totais)], ["menor", Math.min(...totais)]]
+    .forEach(([rotulo, valor]) => {
+      const tile = elemento("div", "tile");
+      tile.appendChild(elemento("span", "", String(valor)));
+      tile.appendChild(elemento("small", "", rotulo));
+      numeros.appendChild(tile);
+    });
+  area.appendChild(numeros);
+  if (aviso) area.appendChild(elemento("p", "aviso-estat", aviso));
+
+  // evolução
+  const evolucao = bloco("Evolução dos pontos", "Total de cada partida, da mais antiga à mais recente. Toque num ponto para ver.");
+  if (completas.length < 2) {
+    evolucao.appendChild(elemento("p", "vazio", "Jogue mais uma partida para ver a evolução."));
+  } else {
+    evolucao.appendChild(graficoEvolucao(completas));
+  }
+  area.appendChild(evolucao);
+
+  // média por coluna
+  const porColuna = bloco("Média por coluna");
+  const mediasCol = [0, 1, 2, 3].map(col =>
+    Math.round(completas.reduce((s, p) => s + calcularTotais(p.valores).calculados[`17-${col}`], 0) / completas.length));
+  porColuna.appendChild(barras(["↓ Descida", "↑ Subida", "D Desordem", "S Seca"], mediasCol));
+  area.appendChild(porColuna);
+
+  // destaques
+  const destaques = bloco("Destaques");
+  const lista = elemento("ul", "destaques");
+  const colunasTotal = completas.length * 4;
+  const comBonus = completas.reduce((s, p) => {
+    const c = calcularTotais(p.valores).calculados;
+    return s + [0, 1, 2, 3].filter(col => c[`7-${col}`] > 0).length;
+  }, 0);
+  const yams = completas.reduce((s, p) => s + [0, 1, 2, 3].filter(col => Number(p.valores[`15-${col}`]) > 0).length, 0);
+  const partidasComYam = completas.filter(p => [0, 1, 2, 3].some(col => Number(p.valores[`15-${col}`]) > 0)).length;
+  const pct = (a, b) => Math.round((100 * a) / b);
+
+  const itens = [
+    ["🎯", `Bônus em ${pct(comBonus, colunasTotal)}% das colunas`, `${comBonus} de ${colunasTotal}`],
+    ["🎲", `${yams} YAM${yams === 1 ? "" : "s"} feitos`, `em ${partidasComYam} de ${completas.length} partidas`],
+  ];
+
+  // jogadas mais riscadas
+  const riscos = LINHAS_JOGO.map(l => ({
+    linha: l,
+    vezes: completas.reduce((s, p) => s + [0, 1, 2, 3].filter(col => Number(p.valores[`${l}-${col}`]) === 0).length, 0)
+  })).sort((a, b) => b.vezes - a.vezes).filter(r => r.vezes > 0).slice(0, 3);
+  if (riscos.length) {
+    itens.push(["✖️", "Mais riscadas", riscos.map(r => `${siglaDaCasa(r.linha)} (${pct(r.vezes, colunasTotal)}%)`).join(" · ")]);
+  }
+
+  itens.forEach(([icone, titulo, detalhe]) => {
+    const li = elemento("li");
+    li.appendChild(elemento("span", "icone", icone));
+    const texto = elemento("div");
+    texto.appendChild(elemento("strong", "", titulo));
+    texto.appendChild(elemento("small", "", detalhe));
+    li.appendChild(texto);
+    lista.appendChild(li);
+  });
+  destaques.appendChild(lista);
+  area.appendChild(destaques);
+
+  mostrarTela("tela-estatisticas");
+}
+
+// Gráfico de linha (uma série) em SVG, com marcador do recorde e toque para ver cada ponto.
+function graficoEvolucao(partidas) {
+  const NS = "http://www.w3.org/2000/svg";
+  const W = 340, H = 190, M = { cima: 22, baixo: 22, esq: 38, dir: 14 };
+  const totais = partidas.map(p => p.total);
+  let min = Math.min(...totais), max = Math.max(...totais);
+  if (min === max) { min -= 10; max += 10; }
+  const folga = (max - min) * 0.1;
+  min = Math.max(0, Math.floor((min - folga) / 10) * 10);
+  max = Math.ceil((max + folga) / 10) * 10;
+
+  const x = i => M.esq + (i * (W - M.esq - M.dir)) / (partidas.length - 1);
+  const y = v => M.cima + ((max - v) * (H - M.cima - M.baixo)) / (max - min);
+
+  const caixa = elemento("div", "grafico");
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.setAttribute("role", "img");
+  svg.setAttribute("aria-label", `Evolução dos pontos em ${partidas.length} partidas`);
+  const novo = (tag, attrs) => {
+    const el = document.createElementNS(NS, tag);
+    for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+    svg.appendChild(el);
+    return el;
+  };
+
+  // grade: 3 linhas com os valores
+  for (let i = 0; i <= 2; i++) {
+    const v = Math.round(min + ((max - min) * i) / 2);
+    novo("line", { x1: M.esq, x2: W - M.dir, y1: y(v), y2: y(v), class: "grade" });
+    const t = novo("text", { x: M.esq - 6, y: y(v) + 4, class: "eixo", "text-anchor": "end" });
+    t.textContent = v;
+  }
+
+  // área suave + linha
+  const pontos = partidas.map((p, i) => `${x(i)},${y(p.total)}`);
+  novo("polygon", { points: `${M.esq},${y(min)} ${pontos.join(" ")} ${x(partidas.length - 1)},${y(min)}`, class: "area" });
+  novo("polyline", { points: pontos.join(" "), class: "linha" });
+
+  // pontos (o recorde em destaque, com rótulo)
+  const recorde = Math.max(...totais);
+  const iRecorde = totais.lastIndexOf(recorde);
+  partidas.forEach((p, i) => {
+    novo("circle", { cx: x(i), cy: y(p.total), r: i === iRecorde ? 6 : 4, class: i === iRecorde ? "ponto recorde" : "ponto" });
+  });
+  const rotulo = novo("text", {
+    x: Math.min(Math.max(x(iRecorde), M.esq + 30), W - M.dir - 30), y: y(recorde) - 10,
+    class: "rotulo-recorde", "text-anchor": "middle"
+  });
+  rotulo.textContent = `🏆 ${recorde}`;
+
+  // dica ao tocar
+  const dica = elemento("div", "dica-grafico");
+  dica.hidden = true;
+  partidas.forEach((p, i) => {
+    const alvo = novo("circle", { cx: x(i), cy: y(p.total), r: 14, class: "alvo" });
+    const mostrar = () => {
+      dica.textContent = `${new Date(p.data).toLocaleDateString("pt-BR")} · ${p.total} pts`;
+      dica.style.left = `${(100 * x(i)) / W}%`;
+      dica.style.top = `${(100 * y(p.total)) / H}%`;
+      dica.hidden = false;
+    };
+    alvo.addEventListener("pointerenter", mostrar);
+    alvo.addEventListener("click", mostrar);
+  });
+  svg.addEventListener("pointerleave", () => { dica.hidden = true; });
+
+  caixa.append(svg, dica);
+  return caixa;
+}
+
+// Barras horizontais simples, com o valor no fim de cada uma.
+function barras(rotulos, valores) {
+  const maior = Math.max(...valores, 1);
+  const lista = elemento("div", "barras");
+  rotulos.forEach((rotulo, i) => {
+    const linha = elemento("div", "barra-linha");
+    linha.appendChild(elemento("span", "barra-rotulo", rotulo));
+    const trilho = elemento("div", "barra-trilho");
+    const barra = elemento("div", "barra-cheia");
+    barra.style.width = `${(100 * valores[i]) / maior}%`;
+    trilho.appendChild(barra);
+    linha.appendChild(trilho);
+    linha.appendChild(elemento("span", "barra-valor", String(valores[i])));
+    lista.appendChild(linha);
+  });
+  return lista;
 }
 
 // ---------- desfazer ----------
@@ -943,6 +1150,18 @@ function alternarTema() {
 sistemaEscuro.addEventListener("change", atualizarBotaoTema);
 atualizarBotaoTema();
 atualizarBotaoDesfazer();
+
+// O total guardado de cada partida é sempre refeito a partir da tabela dela,
+// para nunca ficar diferente do TOTAL GERAL mostrado ao abrir a partida.
+function recalcularTotaisHistorico() {
+  let mudou = false;
+  for (const p of historico) {
+    const total = calcularTotais(p.valores || {}).geral;
+    if (p.total !== total) { p.total = total; mudou = true; }
+  }
+  if (mudou) salvarHistorico();
+}
+recalcularTotaisHistorico();
 
 // ---------- backup do histórico ----------
 
@@ -1028,6 +1247,7 @@ async function importarHistorico(campo) {
   if (!confirm(`Importar ${novas.length} partida(s) do backup${quando}? As partidas que já estão aqui continuam.`)) return;
 
   historico = [...historico, ...novas].sort((a, b) => b.data.localeCompare(a.data));
+  recalcularTotaisHistorico();
   salvarHistorico();
   abrirHistorico();
   alert(`${novas.length} partida(s) importada(s).`);

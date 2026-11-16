@@ -73,6 +73,7 @@
   <div class="topo">
     <button onclick="mostrarTela('tela-jogo')">← Voltar</button>
     <h1>Histórico</h1>
+    <button class="direita" onclick="abrirEstatisticas()">📊 Estatísticas</button>
   </div>
 
   <div id="resumo-historico" class="resumo">
@@ -95,6 +96,15 @@
     <input type="file" id="arquivo-backup" accept=".json,application/json" hidden
            onchange="importarHistorico(this)">
   </div>
+</section>
+
+<!-- Estatísticas -->
+<section id="tela-estatisticas" hidden>
+  <div class="topo">
+    <button onclick="abrirHistorico()">← Voltar</button>
+    <h1>Estatísticas</h1>
+  </div>
+  <div id="estatisticas" class="estatisticas"></div>
 </section>
 
 <!-- Detalhe de uma partida salva -->
