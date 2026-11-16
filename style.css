@@ -122,7 +122,10 @@
 
 body {
   margin: 0;
-  padding: 12px 10px 90px;
+  /* No iPhone a página vai até atrás da barra de status (hora, bateria);
+     as margens "safe-area" empurram o conteúdo para a área visível. */
+  padding: calc(12px + env(safe-area-inset-top)) max(10px, env(safe-area-inset-right))
+           90px max(10px, env(safe-area-inset-left));
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   background: var(--fundo);
   color: var(--texto);
@@ -140,6 +143,19 @@ h1 {
   font-size: 13px;
   color: var(--texto-suave);
   margin: 0 0 10px;
+}
+
+/* Faixa fixa atrás da barra de status do iPhone: esconde a tabela que rola
+   por cima do cabeçalho fixo. Em aparelhos sem essa área, a altura é zero. */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-top);
+  background: var(--fundo);
+  z-index: 5;
 }
 
 /* ---------- tabela ---------- */
@@ -188,7 +204,7 @@ th:last-child, td:last-child {
 /* cabeçalho fixo ao rolar */
 thead th {
   position: sticky;
-  top: 0;
+  top: env(safe-area-inset-top);
   z-index: 1;
   background: var(--destaque);
   color: var(--destaque-texto);
@@ -383,7 +399,7 @@ button.perigo {
 .legenda {
   position: fixed;
   left: 50%;
-  bottom: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom));
   transform: translateX(-50%);
   width: calc(100% - 32px);
   max-width: 480px;
