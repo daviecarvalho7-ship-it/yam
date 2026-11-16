@@ -13,30 +13,85 @@
 </head>
 <body>
 
-<h1>YAM – Tabela de Pontuação</h1>
+<!-- Jogo atual -->
+<section id="tela-jogo">
+  <h1>YAM – Tabela de Pontuação</h1>
 
-<table>
-  <thead>
-    <tr>
-      <th class="mpb">MPB</th>
-      <th>↓</th>
-      <th>↑</th>
-      <th>D</th>
-      <th>S</th>
-    </tr>
-  </thead>
+  <table>
+    <thead>
+      <tr>
+        <th class="mpb">MPB</th>
+        <th>↓</th>
+        <th>↑</th>
+        <th>D</th>
+        <th>S</th>
+      </tr>
+    </thead>
 
-  <tbody id="tableBody"></tbody>
+    <tbody id="tableBody"></tbody>
 
-  <tfoot>
-    <tr class="total-geral">
-      <td class="mpb">TOTAL GERAL</td>
-      <td colspan="4" id="total-geral-final">0</td>
-    </tr>
-  </tfoot>
-</table>
+    <tfoot>
+      <tr class="total-geral">
+        <td class="mpb">TOTAL GERAL</td>
+        <td colspan="4" id="total-geral-final">0</td>
+      </tr>
+    </tfoot>
+  </table>
 
-<button onclick="novoJogo()">Novo Jogo</button>
+  <div class="acoes">
+    <button onclick="novoJogo()">Novo Jogo</button>
+    <button onclick="abrirHistorico()">Histórico</button>
+  </div>
+</section>
+
+<!-- Lista de partidas salvas -->
+<section id="tela-historico" hidden>
+  <div class="topo">
+    <button onclick="mostrarTela('tela-jogo')">← Voltar</button>
+    <h1>Histórico</h1>
+  </div>
+
+  <div id="resumo-historico" class="resumo">
+    <div><span id="qtd-partidas">0</span><small>partidas</small></div>
+    <div><span id="recorde">0</span><small>recorde</small></div>
+    <div><span id="media">0</span><small>média</small></div>
+  </div>
+
+  <ul id="lista-historico" class="lista-historico"></ul>
+</section>
+
+<!-- Detalhe de uma partida salva -->
+<section id="tela-partida" hidden>
+  <div class="topo">
+    <button onclick="abrirHistorico()">← Voltar</button>
+    <h1 id="titulo-partida">Partida</h1>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th class="mpb">MPB</th>
+        <th>↓</th>
+        <th>↑</th>
+        <th>D</th>
+        <th>S</th>
+      </tr>
+    </thead>
+
+    <tbody id="tableBody-partida"></tbody>
+
+    <tfoot>
+      <tr class="total-geral">
+        <td class="mpb">TOTAL GERAL</td>
+        <td colspan="4" id="total-geral-partida">0</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <div class="acoes">
+    <button class="perigo" onclick="excluirPartida()">Excluir partida</button>
+  </div>
+</section>
 
 <script src="app.js"></script>
 
