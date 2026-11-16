@@ -633,3 +633,26 @@ tr.total td.bonus-ok {
     color: #7bd17f;
   }
 }
+
+/* ---------- backup ---------- */
+
+.backup {
+  max-width: 700px;
+  margin: 14px auto 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--borda);
+  text-align: center;
+}
+
+.backup h2 {
+  margin: 0 0 4px;
+  font-size: 16px;
+}
+
+.backup .dica {
+  margin: 4px 0;
+}
+
+.backup .acoes {
+  margin: 8px auto;
+}

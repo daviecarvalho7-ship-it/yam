@@ -80,6 +80,19 @@
   </div>
 
   <ul id="lista-historico" class="lista-historico"></ul>
+
+  <div class="backup">
+    <h2>Backup</h2>
+    <p class="dica">As partidas ficam guardadas só neste celular. Exporte um arquivo de vez em quando
+      (e mande para você mesmo no WhatsApp ou e-mail) para não perder o histórico se trocar de aparelho.</p>
+    <div class="acoes">
+      <button onclick="exportarHistorico()">Exportar</button>
+      <button onclick="document.getElementById('arquivo-backup').click()">Importar</button>
+    </div>
+    <p id="ultimo-backup" class="dica"></p>
+    <input type="file" id="arquivo-backup" accept=".json,application/json" hidden
+           onchange="importarHistorico(this)">
+  </div>
 </section>
 
 <!-- Detalhe de uma partida salva -->

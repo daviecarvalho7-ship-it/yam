@@ -627,6 +627,7 @@ function formatarData(iso) {
 // ---------- histórico ----------
 
 function abrirHistorico() {
+  mostrarUltimoBackup();
   const lista = document.getElementById("lista-historico");
   const resumo = document.getElementById("resumo-historico");
   lista.innerHTML = "";
@@ -717,5 +718,99 @@ function alternarTema() {
 
 sistemaEscuro.addEventListener("change", atualizarBotaoTema);
 atualizarBotaoTema();
+
+// ---------- backup do histórico ----------
+
+const CHAVE_ULTIMO_BACKUP = "yam-ultimo-backup";
+
+function mostrarUltimoBackup() {
+  const quando = ler(CHAVE_ULTIMO_BACKUP, null);
+  document.getElementById("ultimo-backup").textContent =
+    quando ? `Último backup exportado: ${formatarData(quando)}` : "Nenhum backup exportado ainda.";
+}
+
+// Gera o arquivo de backup (histórico + partida em andamento) e oferece para
+// compartilhar (WhatsApp, e-mail, Arquivos...) ou baixar.
+async function exportarHistorico() {
+  const agora = new Date();
+  const dados = {
+    app: "yam",
+    versao: 1,
+    exportadoEm: agora.toISOString(),
+    historico,
+    partidaAtual: state
+  };
+  const nome = `yam-backup-${agora.toISOString().slice(0, 10)}.json`;
+  const arquivo = new File([JSON.stringify(dados, null, 2)], nome, { type: "application/json" });
+
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [arquivo] })) {
+      await navigator.share({ files: [arquivo], title: "Backup do YAM" });
+    } else {
+      const url = URL.createObjectURL(arquivo);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = nome;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+  } catch (erro) {
+    if (erro && erro.name === "AbortError") return; // a pessoa cancelou o compartilhamento
+    alert("Não foi possível exportar o backup.");
+    return;
+  }
+
+  localStorage.setItem(CHAVE_ULTIMO_BACKUP, JSON.stringify(agora.toISOString()));
+  mostrarUltimoBackup();
+}
+
+function partidaValida(p) {
+  return p && typeof p.id === "number" && typeof p.data === "string" &&
+    typeof p.total === "number" && p.valores && typeof p.valores === "object";
+}
+
+// Lê um arquivo de backup e junta as partidas com as que já estão aqui
+// (não apaga nem duplica nada).
+async function importarHistorico(campo) {
+  const arquivo = campo.files[0];
+  campo.value = "";
+  if (!arquivo) return;
+
+  let dados;
+  try {
+    dados = JSON.parse(await arquivo.text());
+  } catch {
+    alert("Esse arquivo não é um backup do YAM.");
+    return;
+  }
+
+  const lista = Array.isArray(dados) ? dados : dados && dados.historico;
+  if (!Array.isArray(lista) || !lista.every(partidaValida)) {
+    alert("Esse arquivo não é um backup do YAM.");
+    return;
+  }
+
+  const ids = new Set(historico.map(p => p.id));
+  const novas = lista.filter(p => !ids.has(p.id));
+  const quando = dados.exportadoEm ? ` de ${formatarData(dados.exportadoEm)}` : "";
+
+  if (novas.length === 0) {
+    alert(`Todas as ${lista.length} partidas desse backup${quando} já estão neste celular.`);
+    return;
+  }
+  if (!confirm(`Importar ${novas.length} partida(s) do backup${quando}? As partidas que já estão aqui continuam.`)) return;
+
+  historico = [...historico, ...novas].sort((a, b) => b.data.localeCompare(a.data));
+  salvarHistorico();
+  abrirHistorico();
+  alert(`${novas.length} partida(s) importada(s).`);
+}
+
+// Pede ao navegador para não apagar os dados do app por falta de espaço ou de uso.
+if (navigator.storage && navigator.storage.persist) {
+  navigator.storage.persist().catch(() => {});
+}
 
 buildTable();
