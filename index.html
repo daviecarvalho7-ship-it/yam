@@ -117,6 +117,23 @@
   </div>
 </section>
 
+<!-- Fim de jogo -->
+<div id="fim-de-jogo" class="fim-de-jogo" hidden>
+  <div class="fim-caixa" role="dialog" aria-modal="true" aria-labelledby="fim-titulo">
+    <div class="fim-dado" aria-hidden="true">🎲</div>
+    <h2 id="fim-titulo">Fim de jogo!</h2>
+    <p class="fim-total"><span id="fim-total">0</span> pontos</p>
+    <p id="fim-recorde" class="fim-recorde"></p>
+    <p id="fim-colunas" class="fim-colunas"></p>
+    <p class="fim-salva">A partida foi salva no histórico.</p>
+    <div class="fim-acoes">
+      <button class="principal" onclick="comecarNovaPartida()">Nova partida</button>
+      <button onclick="fecharFimDeJogo()">Ver tabela</button>
+    </div>
+  </div>
+  <div id="confete" class="confete" aria-hidden="true"></div>
+</div>
+
 <!-- Explicação das siglas -->
 <div id="legenda" class="legenda" role="status" hidden>
   <strong></strong>

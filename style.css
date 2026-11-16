@@ -504,3 +504,101 @@ tbody tr td.piscar {
   color: inherit;
   font-weight: bold;
 }
+
+/* ---------- fim de jogo ---------- */
+
+.fim-de-jogo {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.fim-caixa {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 360px;
+  padding: 24px 20px 20px;
+  border-radius: 16px;
+  background: var(--superficie);
+  color: var(--texto);
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+}
+
+.fim-dado {
+  font-size: 44px;
+  line-height: 1;
+}
+
+.fim-caixa h2 {
+  margin: 8px 0 4px;
+  font-size: 24px;
+}
+
+.fim-total {
+  margin: 4px 0;
+  font-size: 18px;
+}
+
+.fim-total span {
+  display: block;
+  font-size: 56px;
+  font-weight: bold;
+  line-height: 1.1;
+  color: var(--destaque);
+}
+
+.fim-de-jogo.recorde .fim-total span {
+  color: #c98a00;
+}
+
+.fim-recorde {
+  margin: 6px 0;
+  font-weight: bold;
+}
+
+.fim-colunas {
+  margin: 6px 0;
+  color: var(--texto-suave);
+}
+
+.fim-salva {
+  margin: 10px 0 16px;
+  font-size: 13px;
+  color: var(--texto-suave);
+}
+
+.fim-acoes {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+/* confete do recorde */
+.confete {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.confete i {
+  position: absolute;
+  top: -12px;
+  width: 8px;
+  height: 14px;
+  border-radius: 2px;
+  animation-name: cair;
+  animation-timing-function: ease-in;
+  animation-fill-mode: forwards;
+}
+
+@keyframes cair {
+  to { transform: translateY(110vh) rotate(720deg); opacity: 0.8; }
+}

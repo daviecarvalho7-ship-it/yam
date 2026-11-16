@@ -396,6 +396,7 @@ function montarTabela(tbody, valores, editavel) {
             fazer: () => {
               input.value = exibir("0");
               update(key, "0");
+              verificarFimDeJogo();
             }
           });
           piscarCasa(problema.certa);
@@ -424,6 +425,7 @@ function montarTabela(tbody, valores, editavel) {
           const numero = String(Number(input.value));
           input.value = exibir(numero);
           update(key, numero);
+          verificarFimDeJogo();
         });
         td.appendChild(input);
       } else if (!calculada) {
@@ -467,27 +469,110 @@ function update(key, value) {
   calcular();
 }
 
+// Id da entrada do histórico que corresponde à partida atual (quando ela
+// já foi salva automaticamente ao terminar). Evita salvar duas vezes.
+const CHAVE_PARTIDA_SALVA = "yam-partida-salva";
+let partidaSalvaId = ler(CHAVE_PARTIDA_SALVA, null);
+
+function guardarPartidaSalvaId(id) {
+  partidaSalvaId = id;
+  if (id === null) localStorage.removeItem(CHAVE_PARTIDA_SALVA);
+  else localStorage.setItem(CHAVE_PARTIDA_SALVA, JSON.stringify(id));
+}
+
+function entradaDaPartidaAtual() {
+  return historico.find(p => p.id === partidaSalvaId) || null;
+}
+
+// Salva a partida atual no histórico; se ela já estava salva, só atualiza.
+function salvarPartidaAtual() {
+  const total = calcularTotais(state).geral;
+  const existente = entradaDaPartidaAtual();
+  if (existente) {
+    existente.total = total;
+    existente.valores = { ...state };
+  } else {
+    const id = Date.now();
+    historico.unshift({ id, data: new Date().toISOString(), total, valores: { ...state } });
+    guardarPartidaSalvaId(id);
+  }
+  salvarHistorico();
+}
+
+const partidaCompleta = () =>
+  LINHAS_JOGO.every(l => [0, 1, 2, 3].every(col => preenchida(l, col)));
+
+// Chamado depois de cada valor aceito: se a última casa foi preenchida,
+// salva a partida e mostra o resultado.
+function verificarFimDeJogo() {
+  if (!partidaCompleta()) return;
+
+  const outras = historico.filter(p => p.id !== partidaSalvaId).map(p => p.total);
+  const recordeAnterior = outras.length ? Math.max(...outras) : null;
+  salvarPartidaAtual();
+  mostrarFimDeJogo(recordeAnterior);
+}
+
+function mostrarFimDeJogo(recordeAnterior) {
+  const { calculados, geral } = calcularTotais(state);
+  const primeira = recordeAnterior === null;
+  const novoRecorde = !primeira && geral > recordeAnterior;
+
+  document.getElementById("fim-total").textContent = geral;
+  document.getElementById("fim-recorde").textContent =
+    primeira ? "Sua primeira partida salva! 🎉"
+    : novoRecorde ? `🏆 Novo recorde! (o anterior era ${recordeAnterior})`
+    : geral === recordeAnterior ? `Igualou seu recorde de ${recordeAnterior}!`
+    : `Seu recorde é ${recordeAnterior}.`;
+  document.getElementById("fim-colunas").textContent =
+    ["↓", "↑", "D", "S"].map((c, col) => `${c} ${calculados[`17-${col}`]}`).join("  ·  ");
+
+  const caixa = document.getElementById("fim-de-jogo");
+  caixa.classList.toggle("recorde", novoRecorde);
+  caixa.hidden = false;
+  document.getElementById("legenda").hidden = true;
+  if (novoRecorde) soltarConfete();
+}
+
+function fecharFimDeJogo() {
+  document.getElementById("fim-de-jogo").hidden = true;
+}
+
+function comecarNovaPartida() {
+  state = {};
+  salvar();
+  guardarPartidaSalvaId(null);
+  buildTable();
+  fecharFimDeJogo();
+}
+
+// Confete simples de comemoração do recorde.
+function soltarConfete() {
+  const cores = ["#f2b134", "#3d6ea8", "#ffffff", "#e8604c", "#5cb85c"];
+  const area = document.getElementById("confete");
+  area.innerHTML = "";
+  for (let i = 0; i < 60; i++) {
+    const p = document.createElement("i");
+    p.style.left = Math.random() * 100 + "%";
+    p.style.background = cores[i % cores.length];
+    p.style.animationDelay = Math.random() * 0.6 + "s";
+    p.style.animationDuration = 1.8 + Math.random() * 1.2 + "s";
+    area.appendChild(p);
+  }
+  setTimeout(() => { area.innerHTML = ""; }, 3800);
+}
+
 function novoJogo() {
+  const jaSalva = entradaDaPartidaAtual() !== null;
   const temValores = partidaTemValores(state);
-  const mensagem = temValores
-    ? "Salvar esta partida no histórico e começar um novo jogo?"
-    : "Começar um novo jogo?";
+  const mensagem = jaSalva || !temValores
+    ? "Começar um novo jogo?"
+    : "Salvar esta partida no histórico e começar um novo jogo?";
 
   if (!confirm(mensagem)) return;
 
-  if (temValores) {
-    historico.unshift({
-      id: Date.now(),
-      data: new Date().toISOString(),
-      total: calcularTotais(state).geral,
-      valores: state
-    });
-    salvarHistorico();
-  }
-
-  state = {};
-  salvar();
-  buildTable();
+  if (temValores) salvarPartidaAtual();
+  comecarNovaPartida();
 }
 
 // ---------- telas ----------
