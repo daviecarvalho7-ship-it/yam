@@ -143,13 +143,26 @@ function erroDeOrdem(linha, col) {
   return null;
 }
 
-// Destaca a próxima casa da descida e da subida.
+// Destaca a próxima casa da descida e da subida, e põe ✓ na coluna terminada.
 function marcarProximas() {
   body.querySelectorAll("td.proxima").forEach(td => td.classList.remove("proxima"));
+  const cabecalhos = document.querySelectorAll("#tela-jogo thead th");
+  const descidaAcabou = proximaCasa(COL_DESCIDA) === null;
+
   for (const col of [COL_DESCIDA, COL_SUBIDA]) {
     const linha = proximaCasa(col);
     if (linha !== null) body.querySelector(`[data-key="${linha}-${col}"]`).classList.add("proxima");
+    const completa = linha === null && (col === COL_DESCIDA || descidaAcabou);
+    cabecalhos[col + 1].classList.toggle("completa", completa);
   }
+}
+
+// Marca as casas riscadas (valor 0) para ficarem com visual próprio.
+function marcarRiscados(tbody, valores) {
+  tbody.querySelectorAll("td[data-key]").forEach(td => {
+    const v = valores[td.dataset.key];
+    td.classList.toggle("riscado", v !== undefined && v !== "" && Number(v) === 0);
+  });
 }
 
 // Devolve a mensagem de erro, ou null se o valor pode ficar.
@@ -324,6 +337,7 @@ function atualizarTotais(tbody, totalCell, valores) {
     tbody.querySelector(`[data-key="${key}"]`).textContent = valor;
   }
   totalCell.textContent = geral;
+  marcarRiscados(tbody, valores);
 }
 
 // ---------- jogo atual ----------

@@ -1,19 +1,23 @@
 /* ---------- cores (claro / escuro) ---------- */
+/* Poucas cores, cada uma com um papel: azul = estrutura e destaque,
+   cinza = calculado, amarelo = casa em edição, vermelho = erro. */
 
 :root {
-  --fundo: #f5f2ea;
+  --fundo: #f3f3f0;
   --superficie: #ffffff;
   --texto: #1d1d1f;
-  --texto-suave: #6b665c;
+  --texto-suave: #66666a;
   --borda-forte: #2b2b2b;
-  --borda: #cfc8b8;
-  --numeros: #e6f0fb;
-  --combos: #e7f4e9;
-  --total: #ece7dc;
-  --total-forte: #ddd5c4;
+  --borda: #c8c8c4;
+  --nome: #f7f7f5;            /* coluna com o nome das jogadas */
+  --calculado: #ebebe8;       /* linhas de total (não se digita) */
+  --calculado-forte: #dcdcd7;
   --destaque: #1f3a5f;
+  --vez: #1f3a5f;             /* borda da casa da vez */
   --destaque-texto: #ffffff;
-  --foco: #f2b134;
+  --foco: #f2b134;            /* casa em que se está digitando */
+  --risco: #c4c4bf;           /* listras da casa riscada */
+  --riscado-texto: #8a8a86;
   --perigo: #b00020;
   color-scheme: light;
 }
@@ -22,18 +26,20 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --fundo: #121212;
-    --superficie: #1c1c1e;
+    --superficie: #1e1e20;
     --texto: #f2f2f2;
-    --texto-suave: #a7a29a;
+    --texto-suave: #a0a0a6;
     --borda-forte: #8d8d92;
-    --borda: #3a3a3c;
-    --numeros: #172638;
-    --combos: #16301e;
-    --total: #2a2a2c;
-    --total-forte: #35353a;
+    --borda: #4a4a4f;
+    --nome: #19191b;
+    --calculado: #2b2b2f;
+    --calculado-forte: #36363b;
     --destaque: #3d6ea8;
+    --vez: #8bb8f0;
     --destaque-texto: #ffffff;
     --foco: #f2b134;
+    --risco: #4a4a4f;
+    --riscado-texto: #8a8a90;
     --perigo: #ff6b6b;
     color-scheme: dark;
   }
@@ -41,18 +47,20 @@
 
 :root[data-theme="dark"] {
   --fundo: #121212;
-  --superficie: #1c1c1e;
+  --superficie: #1e1e20;
   --texto: #f2f2f2;
-  --texto-suave: #a7a29a;
+  --texto-suave: #a0a0a6;
   --borda-forte: #8d8d92;
-  --borda: #3a3a3c;
-  --numeros: #172638;
-  --combos: #16301e;
-  --total: #2a2a2c;
-  --total-forte: #35353a;
+  --borda: #4a4a4f;
+  --nome: #19191b;
+  --calculado: #2b2b2f;
+  --calculado-forte: #36363b;
   --destaque: #3d6ea8;
+  --vez: #8bb8f0;
   --destaque-texto: #ffffff;
   --foco: #f2b134;
+  --risco: #4a4a4f;
+  --riscado-texto: #8a8a90;
   --perigo: #ff6b6b;
   color-scheme: dark;
 }
@@ -253,24 +261,42 @@ input:focus {
   box-shadow: inset 0 0 0 2px var(--foco);
 }
 
-/* próxima casa da descida (↓) e da subida (↑) */
-tbody tr td.proxima {
-  background: color-mix(in srgb, var(--foco) 28%, var(--superficie));
-  box-shadow: inset 0 0 0 2px var(--foco);
+/* nome das jogadas */
+tbody td.mpb {
+  background: var(--nome);
 }
 
-/* seções */
-tr.numeros td { background: var(--numeros); }
-tr.combos td  { background: var(--combos); }
-
+/* linhas calculadas: cinza neutro, sem campo de digitar */
 tr.total td {
-  background: var(--total);
+  background: var(--calculado);
   font-weight: bold;
 }
 
 tr.total-forte td {
-  background: var(--total-forte);
+  background: var(--calculado-forte);
   font-weight: bold;
+}
+
+/* próxima casa da descida (↓) e da subida (↑) */
+tbody tr td.proxima {
+  background: color-mix(in srgb, var(--destaque) 10%, var(--superficie));
+  box-shadow: inset 0 0 0 3px var(--vez);
+}
+
+/* casa riscada (0): listras e número apagado */
+tbody tr td.riscado {
+  background: repeating-linear-gradient(135deg, transparent 0 7px, var(--risco) 7px 8px);
+  color: var(--riscado-texto);
+}
+
+td.riscado input {
+  color: var(--riscado-texto);
+}
+
+/* coluna de descida ou subida completa */
+thead th.completa::after {
+  content: " ✓";
+  font-size: 14px;
 }
 
 tr.fim-secao td {
