@@ -215,6 +215,21 @@ thead th {
   cursor: pointer;
 }
 
+/* Faixa da cor do fundo logo acima do cabeçalho. Quando ele gruda no topo,
+   ela cobre as linhas que passariam por cima dele (no iPhone, essa área fica
+   atrás da hora e da bateria). Com a tabela parada, a moldura (.tabela) corta
+   a faixa e ela não aparece. */
+thead th::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: -1px;
+  bottom: 100%;
+  height: 150px;
+  background: var(--fundo);
+  pointer-events: none;
+}
+
 tbody td.mpb {
   cursor: pointer;
 }
