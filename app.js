@@ -34,13 +34,13 @@ const LEGENDA_LINHAS = [
   ["1º total", "Soma das seis linhas de cima. As referências somam 60, o necessário para o bônus."],
   ["Bônus", "Ganha 30 pontos se o 1º total for 60 ou mais."],
   ["2º total", "1º total + bônus."],
-  ["Q – Quadra", "Quatro dados iguais."],
-  ["F – Full", "Uma trinca e um par (ex.: 3-3-3-5-5)."],
-  ["S- – Sequência menor", "1-2-3-4-5."],
-  ["S+ – Sequência maior", "2-3-4-5-6."],
-  ["X MIN – Mínimo", "Soma dos cinco dados, tentando fazer o menor valor."],
-  ["X MAX – Máximo", "Soma dos cinco dados, tentando fazer o maior valor."],
-  ["YAM", "Os cinco dados iguais."],
+  ["Q – Quadra", "Quatro dados iguais. Vale 20 + a soma dos quatro (ex.: quatro 5 = 40)."],
+  ["F – Full", "Uma trinca e um par (ex.: 3-3-3-5-5). Vale 30 + a soma dos dados."],
+  ["S- – Sequência menor", "1-2-3-4-5. Vale 35 + 15 = 50."],
+  ["S+ – Sequência maior", "2-3-4-5-6. Vale 40 + 20 = 60."],
+  ["X MIN – Mínimo", "Soma dos cinco dados, tentando fazer o menor valor. Precisa ser menor que o X MAX da coluna."],
+  ["X MAX – Máximo", "Soma dos cinco dados, tentando fazer o maior valor. Precisa ser maior que o X MIN da coluna."],
+  ["YAM", "Os cinco dados iguais. Vale 50 + a soma dos dados (ex.: cinco 6 = 80)."],
   ["3º total", "Soma das linhas de Quadra até YAM."],
   ["2º + 3º total", "Total da coluna."]
 ];
@@ -54,14 +54,80 @@ const LEGENDA_COLUNAS = {
 };
 
 let timerLegenda = null;
+let ultimoAviso = 0;
 
-function mostrarLegenda([titulo, texto]) {
+function mostrarLegenda([titulo, texto], erro = false) {
   const caixa = document.getElementById("legenda");
   caixa.querySelector("strong").textContent = titulo;
   caixa.querySelector("span").textContent = texto;
+  caixa.classList.toggle("erro", erro);
   caixa.hidden = false;
   clearTimeout(timerLegenda);
-  timerLegenda = setTimeout(() => { caixa.hidden = true; }, 5000);
+  timerLegenda = setTimeout(() => { caixa.hidden = true; }, erro ? 7000 : 5000);
+}
+
+// ---------- valores possíveis ----------
+
+const intervalo = (de, ate) => Array.from({ length: ate - de + 1 }, (_, i) => de + i);
+const FACES = intervalo(1, 6);
+
+// Full: trinca de um valor + par de outro, 30 + soma dos cinco dados.
+const SOMAS_FULL = [...new Set(
+  FACES.flatMap(a => FACES.filter(b => b !== a).map(b => 30 + 3 * a + 2 * b))
+)].sort((x, y) => x - y);
+
+// Lista de valores aceitos em cada linha (0 = riscado).
+function valoresPossiveis(linha) {
+  if (linha <= 5) {
+    const face = linha + 1;
+    return intervalo(0, 5).map(qtd => qtd * face);
+  }
+  switch (linha) {
+    case 9:  return [0, ...FACES.map(f => 20 + 4 * f)];  // Quadra
+    case 10: return [0, ...SOMAS_FULL];                  // Full
+    case 11: return [0, 50];                             // Sequência menor
+    case 12: return [0, 60];                             // Sequência maior
+    case 13:                                             // X MIN
+    case 14: return [0, ...intervalo(5, 30)];            // X MAX
+    case 15: return [0, ...FACES.map(f => 50 + 5 * f)];  // YAM
+  }
+  return null;
+}
+
+function descreverValores(lista) {
+  return lista.length > 12
+    ? `${lista[0]}, ou de ${lista[1]} a ${lista[lista.length - 1]}`
+    : lista.join(", ");
+}
+
+// Devolve a mensagem de erro, ou null se o valor pode ficar.
+function validar(key, texto) {
+  if (texto === "") return null;
+
+  const [linha, col] = key.split("-").map(Number);
+  const nome = rows[linha];
+  const valor = Number(texto);
+  const possiveis = valoresPossiveis(linha);
+
+  if (!Number.isInteger(valor) || !possiveis.includes(valor)) {
+    let msg = `Valores possíveis: ${descreverValores(possiveis)}.`;
+    if (linha === 10) msg = `Valores possíveis: 0 ou um destes: ${SOMAS_FULL.join(", ")}.`;
+    return [`${valor} não vale em ${nome}`, msg];
+  }
+
+  if ((linha === 13 || linha === 14) && valor !== 0) {
+    const outraLinha = linha === 13 ? 14 : 13;
+    const outro = Number(state[`${outraLinha}-${col}`]) || 0;
+    if (outro !== 0) {
+      const min = linha === 13 ? valor : outro;
+      const max = linha === 14 ? valor : outro;
+      if (max <= min) {
+        return [`${valor} não vale em ${nome}`, `Nesta coluna o X MAX precisa ser maior que o X MIN (MIN = ${min}, MAX = ${max}).`];
+      }
+    }
+  }
+
+  return null;
 }
 
 document.addEventListener("click", evento => {
@@ -74,7 +140,8 @@ document.addEventListener("click", evento => {
   } else if (coluna) {
     const legenda = LEGENDA_COLUNAS[coluna.textContent.trim()];
     if (legenda) mostrarLegenda(legenda);
-  } else if (!alvo.closest("#legenda")) {
+  } else if (!alvo.closest("#legenda") && Date.now() - ultimoAviso > 600) {
+    // (um toque fora da casa dispara o aviso de erro; não fecha esse mesmo aviso)
     document.getElementById("legenda").hidden = true;
   }
 });
@@ -173,6 +240,15 @@ function montarTabela(tbody, valores, editavel) {
         input.inputMode = "numeric";
         input.value = valores[key] ?? "";
         input.addEventListener("input", () => update(key, input.value));
+        // Ao terminar de digitar (sair da casa), apaga o valor se ele for impossível.
+        input.addEventListener("change", () => {
+          const erro = validar(key, input.value);
+          if (!erro) return;
+          input.value = "";
+          update(key, "");
+          ultimoAviso = Date.now();
+          mostrarLegenda(erro, true);
+        });
         td.appendChild(input);
       } else if (!calculada) {
         td.textContent = valores[key] ?? "";

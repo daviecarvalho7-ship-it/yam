@@ -433,3 +433,8 @@ button.perigo {
   font-size: 16px;
   margin-bottom: 2px;
 }
+
+.legenda.erro {
+  background: #c62828;
+  color: #ffffff;
+}
