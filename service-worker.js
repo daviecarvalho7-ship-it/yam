@@ -1,5 +1,5 @@
 // Ao publicar mudanças, aumente a versão para limpar o cache antigo.
-const CACHE_NAME = "yam-cache-v6";
+const CACHE_NAME = "yam-cache-v7";
 const FILES_TO_CACHE = [
   "./",
   "./index.html",
@@ -12,7 +12,7 @@ const FILES_TO_CACHE = [
 
 self.addEventListener("install", event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(FILES_TO_CACHE))
+    caches.open(CACHE_NAME).then(cache => cache.addAll(FILES_TO_CACHE.map(file => new Request(file, { cache: "reload" }))))
   );
   // Ativa a nova versão sem esperar todas as abas fecharem.
   self.skipWaiting();
@@ -34,7 +34,7 @@ self.addEventListener("fetch", event => {
   if (event.request.method !== "GET") return;
 
   event.respondWith(
-    fetch(event.request)
+    fetch(event.request, { cache: "no-cache" }) // sempre confere com o servidor se há versão nova
       .then(response => {
         if (response.ok && new URL(event.request.url).origin === self.location.origin) {
           const copy = response.clone();

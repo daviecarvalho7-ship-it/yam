@@ -11,14 +11,31 @@
   <link rel="manifest" href="manifest.json">
 
   <link rel="stylesheet" href="style.css">
+
+  <!-- Aplica o tema escolhido antes de desenhar a página, para não piscar. -->
+  <script>
+    try {
+      const tema = localStorage.getItem("yam-tema");
+      if (tema === "light" || tema === "dark") document.documentElement.dataset.theme = tema;
+    } catch {}
+  </script>
 </head>
 <body>
 
 <!-- Jogo atual -->
 <section id="tela-jogo">
+  <div class="barra">
+    <button id="botao-tema" class="tema" role="switch" aria-checked="false"
+            aria-label="Modo escuro" onclick="alternarTema()">
+      <span aria-hidden="true">☀️</span>
+      <span class="trilho"><span class="bolinha"></span></span>
+      <span aria-hidden="true">🌙</span>
+    </button>
+  </div>
   <h1>YAM – Tabela de Pontuação</h1>
   <p class="dica">Toque no nome de uma linha ou coluna para ver o que significa.</p>
 
+  <div class="tabela">
   <table>
     <thead>
       <tr>
@@ -39,6 +56,7 @@
       </tr>
     </tfoot>
   </table>
+  </div>
 
   <div class="acoes">
     <button class="principal" onclick="novoJogo()">Novo Jogo</button>
@@ -69,6 +87,7 @@
     <h1 id="titulo-partida">Partida</h1>
   </div>
 
+  <div class="tabela">
   <table>
     <thead>
       <tr>
@@ -89,6 +108,7 @@
       </tr>
     </tfoot>
   </table>
+  </div>
 
   <div class="acoes">
     <button class="perigo" onclick="excluirPartida()">Excluir partida</button>

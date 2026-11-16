@@ -18,8 +18,9 @@
   color-scheme: light;
 }
 
+/* Escuro: segue o celular, a menos que a pessoa tenha escolhido no botão do app. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --fundo: #121212;
     --superficie: #1c1c1e;
     --texto: #f2f2f2;
@@ -36,6 +37,77 @@
     --perigo: #ff6b6b;
     color-scheme: dark;
   }
+}
+
+:root[data-theme="dark"] {
+  --fundo: #121212;
+  --superficie: #1c1c1e;
+  --texto: #f2f2f2;
+  --texto-suave: #a7a29a;
+  --borda-forte: #8d8d92;
+  --borda: #3a3a3c;
+  --numeros: #172638;
+  --combos: #16301e;
+  --total: #2a2a2c;
+  --total-forte: #35353a;
+  --destaque: #3d6ea8;
+  --destaque-texto: #ffffff;
+  --foco: #f2b134;
+  --perigo: #ff6b6b;
+  color-scheme: dark;
+}
+
+/* ---------- botão de tema ---------- */
+
+.barra {
+  display: flex;
+  justify-content: flex-end;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.tema {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border: none;
+  background: none;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.tema .trilho {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  border-radius: 12px;
+  background: var(--borda);
+  transition: background 0.2s;
+}
+
+.tema .bolinha {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s;
+}
+
+.tema[aria-checked="true"] .trilho {
+  background: var(--destaque);
+}
+
+.tema[aria-checked="true"] .bolinha {
+  transform: translateX(20px);
+}
+
+.tema:active {
+  transform: none;
 }
 
 /* ---------- base ---------- */
@@ -72,16 +144,23 @@ h1 {
 
 /* ---------- tabela ---------- */
 
-table {
-  width: 100%;
+/* A moldura arredondada fica num bloco em volta da tabela. O "clip" corta os cantos
+   sem atrapalhar o cabeçalho fixo; quando ele gruda no topo, fica com cantos retos
+   e cobre totalmente as linhas que passam por baixo. */
+.tabela {
   max-width: 700px;
   margin: 0 auto;
-  border-collapse: separate;
-  border-spacing: 0;
-  table-layout: fixed;
   background: var(--superficie);
   border: 2px solid var(--borda-forte);
   border-radius: 10px;
+  overflow: clip;
+}
+
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
 }
 
 th, td {
@@ -118,14 +197,6 @@ thead th {
   border-bottom: 2px solid var(--borda-forte);
   border-right-color: rgba(255, 255, 255, 0.25);
   cursor: pointer;
-}
-
-thead th:first-child {
-  border-top-left-radius: 8px;
-}
-
-thead th:last-child {
-  border-top-right-radius: 8px;
 }
 
 tbody td.mpb {
@@ -187,14 +258,6 @@ tr.fim-secao td {
 
 .total-geral td:not(.mpb) {
   font-size: 26px;
-}
-
-.total-geral td:first-child {
-  border-bottom-left-radius: 8px;
-}
-
-.total-geral td:last-child {
-  border-bottom-right-radius: 8px;
 }
 
 /* ---------- botões ---------- */

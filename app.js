@@ -36,8 +36,8 @@ const LEGENDA_LINHAS = [
   ["2º total", "1º total + bônus."],
   ["Q – Quadra", "Quatro dados iguais."],
   ["F – Full", "Uma trinca e um par (ex.: 3-3-3-5-5)."],
-  ["S- – Sequência baixa", "1-2-3-4-5."],
-  ["S+ – Sequência alta", "2-3-4-5-6."],
+  ["S- – Sequência menor", "1-2-3-4-5."],
+  ["S+ – Sequência maior", "2-3-4-5-6."],
   ["X MIN – Mínimo", "Soma dos cinco dados, tentando fazer o menor valor."],
   ["X MAX – Máximo", "Soma dos cinco dados, tentando fazer o maior valor."],
   ["YAM", "Os cinco dados iguais."],
@@ -317,5 +317,33 @@ function excluirPartida() {
   partidaAberta = null;
   abrirHistorico();
 }
+
+// ---------- tema claro / escuro ----------
+
+const sistemaEscuro = window.matchMedia("(prefers-color-scheme: dark)");
+
+function temaAtual() {
+  const escolhido = document.documentElement.dataset.theme;
+  if (escolhido === "light" || escolhido === "dark") return escolhido;
+  return sistemaEscuro.matches ? "dark" : "light";
+}
+
+function atualizarBotaoTema() {
+  const escuro = temaAtual() === "dark";
+  document.getElementById("botao-tema").setAttribute("aria-checked", escuro);
+  document.querySelectorAll('meta[name="theme-color"]').forEach(meta => {
+    meta.content = escuro ? "#121212" : "#1f3a5f";
+  });
+}
+
+function alternarTema() {
+  const novo = temaAtual() === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = novo;
+  try { localStorage.setItem("yam-tema", novo); } catch {}
+  atualizarBotaoTema();
+}
+
+sistemaEscuro.addEventListener("change", atualizarBotaoTema);
+atualizarBotaoTema();
 
 buildTable();
