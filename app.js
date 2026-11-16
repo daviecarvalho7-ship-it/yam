@@ -56,14 +56,16 @@ const LEGENDA_COLUNAS = {
 let timerLegenda = null;
 let ultimoAviso = 0;
 
-function mostrarLegenda([titulo, texto], erro = false) {
+// tipo: "" (legenda), "aviso" (casa fora da vez) ou "erro" (valor recusado).
+function mostrarLegenda([titulo, texto], tipo = "") {
   const caixa = document.getElementById("legenda");
   caixa.querySelector("strong").textContent = titulo;
   caixa.querySelector("span").textContent = texto;
-  caixa.classList.toggle("erro", erro);
+  caixa.classList.toggle("erro", tipo === "erro");
+  caixa.classList.toggle("aviso", tipo === "aviso");
   caixa.hidden = false;
   clearTimeout(timerLegenda);
-  timerLegenda = setTimeout(() => { caixa.hidden = true; }, erro ? 7000 : 5000);
+  timerLegenda = setTimeout(() => { caixa.hidden = true; }, tipo ? 7000 : 5000);
 }
 
 // ---------- valores possíveis ----------
@@ -121,26 +123,61 @@ function proximaCasa(col) {
   return null;
 }
 
-// Mensagem se um ponto (diferente de 0) nesta casa quebra a ordem; senão null.
+// Se marcar ponto (diferente de 0) nesta casa quebra a ordem, diz o motivo e
+// qual é a casa certa ({ motivo, certa: "linha-coluna" }); senão null.
 // Riscar (0) pode em qualquer casa, a qualquer hora.
-function erroDeOrdem(linha, col) {
+function problemaDeOrdem(linha, col) {
   if (col === COL_DESCIDA) {
     const anterior = LINHAS_JOGO.slice(0, LINHAS_JOGO.indexOf(linha)).find(l => !preenchida(l, col));
     if (anterior !== undefined) {
-      return `A descida (↓) é de cima para baixo. A próxima casa é ${rows[anterior]}. Para pular, risque com 0.`;
+      return {
+        motivo: `A descida (↓) é preenchida de cima para baixo, e ainda falta ${rows[anterior]}.`,
+        certa: `${anterior}-${COL_DESCIDA}`
+      };
     }
   }
   if (col === COL_SUBIDA) {
     const faltaDescida = proximaCasa(COL_DESCIDA);
     if (faltaDescida !== null) {
-      return `A subida (↑) só começa depois de terminar a descida (↓). Na descida falta ${rows[faltaDescida]}. Riscar com 0 pode a qualquer hora.`;
+      return {
+        motivo: `A subida (↑) só começa depois que a descida (↓) termina, e na descida ainda falta ${rows[faltaDescida]}.`,
+        certa: `${faltaDescida}-${COL_DESCIDA}`
+      };
     }
     const abaixo = LINHAS_JOGO.slice(LINHAS_JOGO.indexOf(linha) + 1).reverse().find(l => !preenchida(l, col));
     if (abaixo !== undefined) {
-      return `A subida (↑) é de baixo para cima. A próxima casa é ${rows[abaixo]}. Para pular, risque com 0.`;
+      return {
+        motivo: `A subida (↑) é preenchida de baixo para cima, e ainda falta ${rows[abaixo]}.`,
+        certa: `${abaixo}-${COL_SUBIDA}`
+      };
     }
   }
   return null;
+}
+
+function nomeDaCasa(key) {
+  const [linha, col] = key.split("-").map(Number);
+  return `${rows[linha]} na ${col === COL_DESCIDA ? "descida (↓)" : "subida (↑)"}`;
+}
+
+// Mensagem de casa fora da vez. `aoTocar`: a pessoa só tocou na casa (ainda
+// pode riscar); senão, tentou marcar ponto e o valor foi recusado.
+function mensagemDeOrdem(problema, aoTocar) {
+  const fim = aoTocar
+    ? "Aqui você só pode riscar (digite 0)."
+    : "Para pular uma casa, risque com 0.";
+  return ["Não é a vez desta casa", `${problema.motivo} Preencha em ${nomeDaCasa(problema.certa)}. ${fim}`, problema.certa];
+}
+
+// Faz a casa certa piscar e, se estiver fora da tela, rola até ela.
+function piscarCasa(key) {
+  const td = body.querySelector(`[data-key="${key}"]`);
+  if (!td) return;
+  td.classList.remove("piscar");
+  void td.offsetWidth; // reinicia a animação
+  td.classList.add("piscar");
+  td.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  setTimeout(() => td.classList.remove("piscar"), 1600);
 }
 
 // Destaca a próxima casa da descida e da subida, e põe ✓ na coluna terminada.
@@ -189,8 +226,8 @@ function validar(key, texto) {
   }
 
   if (valor !== 0) {
-    const ordem = erroDeOrdem(linha, col);
-    if (ordem) return [`${nome}: fora de ordem`, ordem];
+    const problema = problemaDeOrdem(linha, col);
+    if (problema) return mensagemDeOrdem(problema, false);
   }
 
   if ((linha === 13 || linha === 14) && valor !== 0) {
@@ -323,7 +360,21 @@ function montarTabela(tbody, valores, editavel) {
         input.value = exibir(valores[key]);
 
         // Ao tocar, seleciona o conteúdo: digitar já substitui o valor ou o risco.
-        input.addEventListener("focus", () => input.select());
+        // Se não é a vez desta casa (↓ ou ↑), já avisa o motivo e mostra a certa.
+        input.addEventListener("focus", () => {
+          input.select();
+          const [linha, col] = key.split("-").map(Number);
+          const problema = input.value === "" ? problemaDeOrdem(linha, col) : null;
+          if (!problema) {
+            // tocou numa casa permitida: tira o aviso de ordem que estiver aberto
+            const caixa = document.getElementById("legenda");
+            if (caixa.classList.contains("aviso")) caixa.hidden = true;
+            return;
+          }
+          ultimoAviso = Date.now();
+          mostrarLegenda(mensagemDeOrdem(problema, true), "aviso");
+          piscarCasa(problema.certa);
+        });
 
         input.addEventListener("input", () => {
           const limpo = input.value.replace(/\D/g, "");
@@ -339,7 +390,8 @@ function montarTabela(tbody, valores, editavel) {
             input.value = "";
             update(key, "");
             ultimoAviso = Date.now();
-            mostrarLegenda(erro, true);
+            mostrarLegenda(erro, "erro");
+            if (erro[2]) piscarCasa(erro[2]);
             return;
           }
           if (input.value === "") return;
