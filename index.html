@@ -2,249 +2,64 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>YAM - Tabela de Pontuação</title>
-
-  <!-- PWA -->
+  <title>YAM mudou de endereço</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#1f3a5f" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#121212" media="(prefers-color-scheme: dark)">
-  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1f3a5f">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
-
-  <link rel="stylesheet" href="style.css">
-
-  <!-- Aplica o tema escolhido antes de desenhar a página, para não piscar. -->
-  <script>
-    try {
-      const tema = localStorage.getItem("yam-tema");
-      if (tema === "light" || tema === "dark") document.documentElement.dataset.theme = tema;
-    } catch {}
-  </script>
+  <style>
+    :root {
+      --fundo: #f3f3f0; --texto: #1d1d1f; --texto-suave: #5f5f63;
+      --destaque: #1f3a5f; --destaque-texto: #ffffff;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --fundo: #121212; --texto: #f2f2f2; --texto-suave: #a8a8ad; --destaque: #3d6ea8; }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      display: grid;
+      place-items: center;
+      padding: max(24px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+      background: var(--fundo);
+      color: var(--texto);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      text-align: center;
+    }
+    main { width: 100%; max-width: 380px; }
+    img { width: 72px; height: 72px; border-radius: 16px; }
+    h1 { font-size: 22px; margin: 14px 0 6px; }
+    .novo { margin: 0 0 22px; font-size: 18px; font-weight: 700; color: var(--destaque); }
+    .dica { color: var(--texto-suave); font-size: 14px; line-height: 1.4; }
+    .botao {
+      display: block;
+      padding: 14px;
+      border-radius: 12px;
+      background: var(--destaque);
+      color: var(--destaque-texto);
+      font-size: 18px;
+      font-weight: 700;
+      text-decoration: none;
+      margin-bottom: 14px;
+    }
+  </style>
 </head>
 <body>
-
-<!-- Jogo atual -->
-<section id="tela-jogo">
-  <div class="barra">
-    <button class="convidar" onclick="convidarJogadores()">📲 Convidar</button>
-    <button id="botao-nome" class="nome-jogador" onclick="editarNome()">👤 Seu nome</button>
-    <button id="botao-tema" class="tema" role="switch" aria-checked="false"
-            aria-label="Modo escuro" onclick="alternarTema()">
-      <span aria-hidden="true">☀️</span>
-      <span class="trilho"><span class="bolinha"></span></span>
-      <span aria-hidden="true">🌙</span>
-    </button>
-  </div>
-  <h1>YAM – Tabela de Pontuação</h1>
-  <p class="dica">Toque no nome de uma linha ou coluna para ver o que significa.</p>
-  <div id="familia-barra" class="familia-barra">
-    <button class="familia-entrar" onclick="abrirFamilia('criar')">👥 Criar sala</button>
-    <button class="familia-entrar" onclick="abrirFamilia('entrar')">🔑 Entrar em sala</button>
-  </div>
-
-  <div class="tabela">
-  <table>
-    <thead>
-      <tr>
-        <th class="mpb">MPB</th>
-        <th>↓</th>
-        <th>↑</th>
-        <th>D</th>
-        <th>S</th>
-      </tr>
-    </thead>
-
-    <tbody id="tableBody"></tbody>
-
-    <tfoot>
-      <tr class="total-geral">
-        <td class="mpb">TOTAL GERAL</td>
-        <td colspan="4" id="total-geral-final">0</td>
-      </tr>
-    </tfoot>
-  </table>
-  </div>
-
-  <div class="acoes">
-    <button class="principal" onclick="novoJogo()">Novo Jogo</button>
-    <button id="botao-desfazer" onclick="desfazer()" aria-label="Desfazer a última jogada">↶ Desfazer</button>
-    <button onclick="abrirHistorico()">Histórico</button>
-  </div>
-</section>
-
-<!-- Lista de partidas salvas -->
-<section id="tela-historico" hidden>
-  <div class="topo">
-    <button onclick="mostrarTela('tela-jogo')">← Voltar</button>
-    <h1>Histórico</h1>
-    <button class="direita" onclick="abrirEstatisticas()">📊 Estatísticas</button>
-  </div>
-
-  <div id="resumo-historico" class="resumo">
-    <div><span id="qtd-partidas">0</span><small>partidas</small></div>
-    <div><span id="recorde">0</span><small>recorde</small></div>
-    <div><span id="media">0</span><small>média</small></div>
-  </div>
-
-  <ul id="lista-historico" class="lista-historico"></ul>
-
-  <div class="backup">
-    <h2>Backup</h2>
-    <p class="dica">As partidas ficam guardadas só neste celular. Exporte um arquivo de vez em quando
-      (e mande para você mesmo no WhatsApp ou e-mail) para não perder o histórico se trocar de aparelho.</p>
-    <div class="acoes">
-      <button onclick="exportarHistorico()">Exportar</button>
-      <button onclick="document.getElementById('arquivo-backup').click()">Importar</button>
-    </div>
-    <p id="ultimo-backup" class="dica"></p>
-    <input type="file" id="arquivo-backup" accept=".json,application/json" hidden
-           onchange="importarHistorico(this)">
-  </div>
-</section>
-
-<!-- Estatísticas -->
-<section id="tela-estatisticas" hidden>
-  <div class="topo">
-    <button onclick="abrirHistorico()">← Voltar</button>
-    <h1>Estatísticas</h1>
-  </div>
-  <div id="estatisticas" class="estatisticas"></div>
-</section>
-
-<!-- Detalhe de uma partida salva -->
-<section id="tela-partida" hidden>
-  <div class="topo">
-    <button onclick="abrirHistorico()">← Voltar</button>
-    <h1 id="titulo-partida">Partida</h1>
-    <p id="sala-partida" class="sala-partida" hidden></p>
-  </div>
-
-  <div class="tabela">
-  <table>
-    <thead>
-      <tr>
-        <th class="mpb">MPB</th>
-        <th>↓</th>
-        <th>↑</th>
-        <th>D</th>
-        <th>S</th>
-      </tr>
-    </thead>
-
-    <tbody id="tableBody-partida"></tbody>
-
-    <tfoot>
-      <tr class="total-geral">
-        <td class="mpb">TOTAL GERAL</td>
-        <td colspan="4" id="total-geral-partida">0</td>
-      </tr>
-    </tfoot>
-  </table>
-  </div>
-
-  <div class="acoes">
-    <button onclick="compartilharPartidaAberta()">📤 Compartilhar</button>
-    <button class="perigo" onclick="excluirPartida()">Excluir partida</button>
-  </div>
-</section>
-
-<!-- Editar o nome do jogador -->
-<div id="janela-nome" class="janela" hidden>
-  <form class="janela-caixa" onsubmit="salvarNome(event)">
-    <h2>Seu nome</h2>
-    <p class="dica">Aparece nas salas e no resultado compartilhado.</p>
-    <input id="campo-nome" type="text" maxlength="20" autocomplete="off"
-           autocapitalize="words" placeholder="Ex.: Maria">
-    <div class="fim-acoes">
-      <button type="submit" class="principal">Salvar</button>
-      <button type="button" onclick="fecharJanelaNome()">Cancelar</button>
-    </div>
-  </form>
-</div>
-
-<!-- Partida em família: criar / entrar -->
-<div id="janela-familia" class="janela" hidden>
-  <div class="janela-caixa">
-    <h2 id="familia-titulo">Criar sala</h2>
-    <p id="familia-explica" class="dica"></p>
-    <label class="rotulo-campo" for="familia-nome">Seu nome</label>
-    <input id="familia-nome" type="text" maxlength="20" autocomplete="off" autocapitalize="words"
-           placeholder="Ex.: Maria">
-    <div id="familia-campo-codigo" hidden>
-      <label class="rotulo-campo" for="familia-codigo">Código da sala</label>
-      <input id="familia-codigo" type="text" inputmode="numeric" maxlength="5" autocomplete="off"
-             placeholder="5 números">
-    </div>
-    <button id="familia-confirmar" class="principal largo" onclick="familia.acaoJanela()">Criar sala</button>
-    <p id="familia-erro" class="familia-erro" role="alert"></p>
-    <button class="link" onclick="familia.fecharJanela()">Cancelar</button>
-  </div>
-</div>
-
-<!-- Partida em família: esperando os outros -->
-<div id="familia-espera" class="fim-de-jogo" hidden>
-  <div class="fim-caixa">
-    <div class="fim-dado" aria-hidden="true">⏳</div>
-    <h2>Você terminou!</h2>
-    <p class="fim-total"><span id="espera-total">0</span> pontos</p>
-    <p id="espera-faltam" class="fim-recorde"></p>
-    <p class="fim-salva">O resultado de todos aparece aqui quando o último terminar.
-      Sua partida já foi salva no histórico.</p>
-    <div class="fim-acoes">
-      <button onclick="familia.fecharEspera()">Ver tabela</button>
-    </div>
-  </div>
-</div>
-
-<!-- Partida em família: pódio -->
-<div id="podio" class="fim-de-jogo" hidden>
-  <div class="fim-caixa podio-caixa">
-    <h2 id="podio-titulo">🏆</h2>
-    <div id="podio-degraus" class="podio"></div>
-    <ol id="podio-lista" class="podio-lista"></ol>
-    <div class="fim-acoes">
-      <button class="principal" onclick="familia.fecharPodio()">Fechar</button>
-    </div>
-    <button class="compartilhar" onclick="familia.compartilharPodio()">📤 Compartilhar pódio</button>
-  </div>
-  <div id="confete-podio" class="confete" aria-hidden="true"></div>
-</div>
-
-<!-- Fim de jogo -->
-<div id="fim-de-jogo" class="fim-de-jogo" hidden>
-  <div class="fim-caixa" role="dialog" aria-modal="true" aria-labelledby="fim-titulo">
-    <div class="fim-dado" aria-hidden="true">🎲</div>
-    <h2 id="fim-titulo">Fim de jogo!</h2>
-    <p class="fim-total"><span id="fim-total">0</span> pontos</p>
-    <p id="fim-recorde" class="fim-recorde"></p>
-    <p id="fim-colunas" class="fim-colunas"></p>
-    <p class="fim-salva">A partida foi salva no histórico.</p>
-    <div class="fim-acoes">
-      <button class="principal" onclick="comecarNovaPartida()">Nova partida</button>
-      <button onclick="fecharFimDeJogo()">Ver tabela</button>
-    </div>
-    <button class="compartilhar" onclick="compartilharFimDeJogo()">📤 Compartilhar resultado</button>
-  </div>
-  <div id="confete" class="confete" aria-hidden="true"></div>
-</div>
-
-<!-- Explicação das siglas -->
-<div id="legenda" class="legenda" role="status" hidden>
-  <strong></strong>
-  <span></span>
-  <button type="button" class="acao-legenda" hidden></button>
-</div>
-
-<script src="app.js"></script>
-<script type="module" src="familia.js"></script>
-
-<!-- Service Worker -->
+<main>
+  <img src="apple-touch-icon.png" alt="">
+  <h1>O YAM mudou de endereço</h1>
+  <p class="novo">jogo-yam.github.io</p>
+  <a class="botao" href="https://jogo-yam.github.io/">Abrir o YAM novo</a>
+  <p class="dica">Se o YAM estiver na tela de início do celular, abra o endereço novo,
+    adicione-o à tela de início e apague o ícone antigo.</p>
+</main>
 <script>
+  // o app antigo não roda mais aqui: tira o service worker e o cache dele
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("service-worker.js");
+    navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister())).catch(() => {});
   }
+  if (window.caches) caches.keys().then(ks => ks.forEach(k => caches.delete(k))).catch(() => {});
 </script>
-
 </body>
 </html>
