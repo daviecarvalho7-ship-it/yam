@@ -1,10 +1,11 @@
 // Ao publicar mudanças, aumente a versão para limpar o cache antigo.
-const CACHE_NAME = "yam-cache-v23";
+const CACHE_NAME = "yam-cache-v24";
 const FILES_TO_CACHE = [
   "./",
   "./index.html",
   "./style.css",
   "./app.js",
+  "./familia.js",
   "./manifest.json",
   "./icon-192.png",
   "./icon-512.png",
@@ -35,6 +36,8 @@ self.addEventListener("activate", event => {
 // Sem internet, usa o que estiver salvo.
 self.addEventListener("fetch", event => {
   if (event.request.method !== "GET") return;
+  // só cuida dos arquivos do próprio app (Firebase e afins vão direto para a rede)
+  if (new URL(event.request.url).origin !== self.location.origin) return;
 
   event.respondWith(
     fetch(event.request, { cache: "no-cache" }) // sempre confere com o servidor se há versão nova

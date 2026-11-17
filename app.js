@@ -136,7 +136,7 @@ function problemaDeOrdem(linha, col) {
     const anterior = LINHAS_JOGO.slice(0, LINHAS_JOGO.indexOf(linha)).find(l => !preenchida(l, col));
     if (anterior !== undefined) {
       return {
-        motivo: `A descida (↓) é preenchida de cima para baixo, e ainda falta ${rows[anterior]}.`,
+        motivo: `A descida (↓) é preenchida de cima para baixo, e ainda falta ${siglaDaCasa(anterior)}.`,
         certa: `${anterior}-${COL_DESCIDA}`
       };
     }
@@ -145,14 +145,14 @@ function problemaDeOrdem(linha, col) {
     const faltaDescida = proximaCasa(COL_DESCIDA);
     if (faltaDescida !== null) {
       return {
-        motivo: `A subida (↑) só começa depois que a descida (↓) termina, e na descida ainda falta ${rows[faltaDescida]}.`,
+        motivo: `A subida (↑) só começa depois que a descida (↓) termina, e na descida ainda falta ${siglaDaCasa(faltaDescida)}.`,
         certa: `${faltaDescida}-${COL_DESCIDA}`
       };
     }
     const abaixo = LINHAS_JOGO.slice(LINHAS_JOGO.indexOf(linha) + 1).reverse().find(l => !preenchida(l, col));
     if (abaixo !== undefined) {
       return {
-        motivo: `A subida (↑) é preenchida de baixo para cima, e ainda falta ${rows[abaixo]}.`,
+        motivo: `A subida (↑) é preenchida de baixo para cima, e ainda falta ${siglaDaCasa(abaixo)}.`,
         certa: `${abaixo}-${COL_SUBIDA}`
       };
     }
@@ -162,7 +162,7 @@ function problemaDeOrdem(linha, col) {
 
 function nomeDaCasa(key) {
   const [linha, col] = key.split("-").map(Number);
-  return `${rows[linha]} na ${col === COL_DESCIDA ? "descida (↓)" : "subida (↑)"}`;
+  return `${siglaDaCasa(linha)} na ${col === COL_DESCIDA ? "descida (↓)" : "subida (↑)"}`;
 }
 
 // Mensagem de casa fora da vez. `aoTocar`: a pessoa só tocou na casa (ainda
@@ -233,7 +233,7 @@ function validar(key, texto) {
   if (texto === "") return null;
 
   const [linha, col] = key.split("-").map(Number);
-  const nome = rows[linha];
+  const nome = siglaDaCasa(linha);
   const valor = Number(texto);
   const possiveis = valoresPossiveis(linha);
 
@@ -401,6 +401,7 @@ function montarTabela(tbody, valores, editavel) {
               registrarJogada(key, "", "0");
               input.value = exibir("0");
               update(key, "0");
+              avisarSala();
               verificarFimDeJogo();
             }
           });
@@ -422,6 +423,7 @@ function montarTabela(tbody, valores, editavel) {
             registrarJogada(key, antes);
             input.value = "";
             update(key, "");
+            avisarSala();
             ultimoAviso = Date.now();
             mostrarLegenda(erro, "erro");
             if (erro[2]) piscarCasa(erro[2]);
@@ -429,12 +431,14 @@ function montarTabela(tbody, valores, editavel) {
           }
           if (input.value === "") {
             registrarJogada(key, antes);
+            avisarSala();
             return;
           }
           const numero = String(Number(input.value));
           registrarJogada(key, antes, numero);
           input.value = exibir(numero);
           update(key, numero);
+          avisarSala();
           verificarFimDeJogo();
         });
         td.appendChild(input);
@@ -506,6 +510,26 @@ function calcular() {
   marcarProximas();
 }
 
+// Toda a tabela tem só valores possíveis? (usado antes de avisar a sala)
+function tabelaValida(valores) {
+  return Object.entries(valores).every(([key, v]) => {
+    if (v === "" || v == null) return true;
+    const possiveis = valoresPossiveis(Number(key.split("-")[0]));
+    return !possiveis || possiveis.includes(Number(v));
+  });
+}
+
+// Chamado só depois que uma casa é confirmada (valor aceito, apagado, riscado ou desfeito).
+function avisarSala() {
+  if (window.familia) familia.sincronizar();
+}
+
+// Botão "Jogar em família" (funciona só com internet).
+function abrirFamilia(modo) {
+  if (window.familia) familia.abrir(modo);
+  else alert("A sala precisa de internet. Verifique a conexão e tente de novo.");
+}
+
 function update(key, value) {
   state[key] = value;
   salvar();
@@ -549,6 +573,13 @@ const partidaCompleta = () =>
 // salva a partida e mostra o resultado.
 function verificarFimDeJogo() {
   if (!partidaCompleta()) return;
+
+  // partida em família: salva, avisa a família e espera os outros
+  if (window.familia && familia.ativa() && !familia.revelada()) {
+    salvarPartidaAtual();
+    familia.aoTerminar();
+    return;
+  }
 
   const outras = historico.filter(p => p.id !== partidaSalvaId).map(p => p.total);
   const recordeAnterior = outras.length ? Math.max(...outras) : null;
@@ -770,6 +801,11 @@ function soltarConfete() {
 }
 
 function novoJogo() {
+  if (window.familia && familia.ativa() && !familia.revelada()) {
+    if (!confirm("Você está numa sala. Sair dela e começar um novo jogo?")) return;
+    familia.sair();
+  }
+
   const jaSalva = entradaDaPartidaAtual() !== null;
   const temValores = partidaTemValores(state);
   const mensagem = jaSalva || !temValores
@@ -867,9 +903,12 @@ function excluirPartida() {
 
 // ---------- estatísticas ----------
 
-// Sigla de cada casa como na tabela, sem o número de pontos na frente
-// ("50 YAM" -> "YAM", "40 S+" -> "S+", "2 / 1" -> "1", "X MIN" fica igual).
-const siglaDaCasa = linha => rows[linha].replace(/^\d+\s*(\/\s*)?/, "");
+// Nome da casa em textos (mensagens e estatísticas): a sigla da tabela sem o
+// número de pontos na frente ("50 YAM" -> "YAM", "40 S+" -> "S+", "X MIN" fica
+// igual). O primeiro bloco fica como na tabela ("2 / 1", "4 / 2"...).
+function siglaDaCasa(linha) {
+  return linha <= 5 ? rows[linha] : rows[linha].replace(/^\d+\s*/, "");
+}
 
 const partidaEstaCompleta = valores =>
   LINHAS_JOGO.every(l => [0, 1, 2, 3].every(col => (valores[`${l}-${col}`] ?? "") !== ""));
@@ -1110,6 +1149,7 @@ function desfazer() {
   else state[jogada.key] = jogada.antes;
   salvar();
   buildTable();
+  avisarSala();
   atualizarBotaoDesfazer();
 
   // se a partida já tinha sido salva ao terminar, mantém o histórico em dia
@@ -1119,7 +1159,7 @@ function desfazer() {
   const de = exibir(desfeito) || "vazia";
   const para = exibir(jogada.antes) || "vazia";
   ultimoAviso = Date.now();
-  mostrarLegenda(["Desfeito", `${rows[linha]} na ${NOMES_COLUNAS[col]}: ${de} → ${para}.`]);
+  mostrarLegenda(["Desfeito", `${siglaDaCasa(linha)} na ${NOMES_COLUNAS[col]}: ${de} → ${para}.`]);
   piscarCasa(jogada.key);
 }
 
@@ -1137,11 +1177,22 @@ function mostrarNome() {
 
 // Abre a janelinha para digitar o nome.
 function editarNome() {
+  if (window.familia && familia.ativa()) {
+    alert("Para trocar o nome, saia da sala primeiro.");
+    return;
+  }
   const campo = document.getElementById("campo-nome");
   campo.value = nomeJogador;
   document.getElementById("janela-nome").hidden = false;
   campo.focus();
   campo.select();
+}
+
+// Usado pela partida em família ao entrar com um nome.
+function definirNome(nome) {
+  nomeJogador = nome;
+  localStorage.setItem(CHAVE_NOME, JSON.stringify(nomeJogador));
+  mostrarNome();
 }
 
 function fecharJanelaNome() {

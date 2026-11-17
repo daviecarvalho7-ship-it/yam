@@ -38,6 +38,10 @@
   </div>
   <h1>YAM – Tabela de Pontuação</h1>
   <p class="dica">Toque no nome de uma linha ou coluna para ver o que significa.</p>
+  <div id="familia-barra" class="familia-barra">
+    <button class="familia-entrar" onclick="abrirFamilia('criar')">👥 Criar sala</button>
+    <button class="familia-entrar" onclick="abrirFamilia('entrar')">🔑 Entrar em sala</button>
+  </div>
 
   <div class="tabela">
   <table>
@@ -148,14 +152,61 @@
 <div id="janela-nome" class="janela" hidden>
   <form class="janela-caixa" onsubmit="salvarNome(event)">
     <h2>Seu nome</h2>
-    <p class="dica">Aparece nas partidas em família e no resultado compartilhado.</p>
+    <p class="dica">Aparece nas salas e no resultado compartilhado.</p>
     <input id="campo-nome" type="text" maxlength="20" autocomplete="off"
-           autocapitalize="words" placeholder="Ex.: Vó Maria">
+           autocapitalize="words" placeholder="Ex.: Maria">
     <div class="fim-acoes">
       <button type="submit" class="principal">Salvar</button>
       <button type="button" onclick="fecharJanelaNome()">Cancelar</button>
     </div>
   </form>
+</div>
+
+<!-- Partida em família: criar / entrar -->
+<div id="janela-familia" class="janela" hidden>
+  <div class="janela-caixa">
+    <h2 id="familia-titulo">Criar sala</h2>
+    <p id="familia-explica" class="dica"></p>
+    <label class="rotulo-campo" for="familia-nome">Seu nome</label>
+    <input id="familia-nome" type="text" maxlength="20" autocomplete="off" autocapitalize="words"
+           placeholder="Ex.: Maria">
+    <div id="familia-campo-codigo" hidden>
+      <label class="rotulo-campo" for="familia-codigo">Código da sala</label>
+      <input id="familia-codigo" type="text" inputmode="numeric" maxlength="5" autocomplete="off"
+             placeholder="5 números">
+    </div>
+    <button id="familia-confirmar" class="principal largo" onclick="familia.acaoJanela()">Criar sala</button>
+    <p id="familia-erro" class="familia-erro" role="alert"></p>
+    <button class="link" onclick="familia.fecharJanela()">Cancelar</button>
+  </div>
+</div>
+
+<!-- Partida em família: esperando os outros -->
+<div id="familia-espera" class="fim-de-jogo" hidden>
+  <div class="fim-caixa">
+    <div class="fim-dado" aria-hidden="true">⏳</div>
+    <h2>Você terminou!</h2>
+    <p class="fim-total"><span id="espera-total">0</span> pontos</p>
+    <p id="espera-faltam" class="fim-recorde"></p>
+    <p class="fim-salva">O resultado de todos aparece aqui quando o último terminar.
+      Sua partida já foi salva no histórico.</p>
+    <div class="fim-acoes">
+      <button onclick="familia.fecharEspera()">Ver tabela</button>
+    </div>
+  </div>
+</div>
+
+<!-- Partida em família: pódio -->
+<div id="podio" class="fim-de-jogo" hidden>
+  <div class="fim-caixa podio-caixa">
+    <h2 id="podio-titulo">🏆</h2>
+    <div id="podio-degraus" class="podio"></div>
+    <ol id="podio-lista" class="podio-lista"></ol>
+    <div class="fim-acoes">
+      <button class="principal" onclick="familia.fecharPodio()">Fechar</button>
+    </div>
+  </div>
+  <div id="confete-podio" class="confete" aria-hidden="true"></div>
 </div>
 
 <!-- Fim de jogo -->
@@ -184,6 +235,7 @@
 </div>
 
 <script src="app.js"></script>
+<script type="module" src="familia.js"></script>
 
 <!-- Service Worker -->
 <script>
