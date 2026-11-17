@@ -28,6 +28,7 @@
 <section id="tela-jogo">
   <div class="barra">
     <button class="convidar" onclick="convidarJogadores()">📲 Convidar</button>
+    <button id="botao-nome" class="nome-jogador" onclick="editarNome()">👤 Seu nome</button>
     <button id="botao-tema" class="tema" role="switch" aria-checked="false"
             aria-label="Modo escuro" onclick="alternarTema()">
       <span aria-hidden="true">☀️</span>
@@ -142,6 +143,20 @@
     <button class="perigo" onclick="excluirPartida()">Excluir partida</button>
   </div>
 </section>
+
+<!-- Editar o nome do jogador -->
+<div id="janela-nome" class="janela" hidden>
+  <form class="janela-caixa" onsubmit="salvarNome(event)">
+    <h2>Seu nome</h2>
+    <p class="dica">Aparece nas partidas em família e no resultado compartilhado.</p>
+    <input id="campo-nome" type="text" maxlength="20" autocomplete="off"
+           autocapitalize="words" placeholder="Ex.: Vó Maria">
+    <div class="fim-acoes">
+      <button type="submit" class="principal">Salvar</button>
+      <button type="button" onclick="fecharJanelaNome()">Cancelar</button>
+    </div>
+  </form>
+</div>
 
 <!-- Fim de jogo -->
 <div id="fim-de-jogo" class="fim-de-jogo" hidden>

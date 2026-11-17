@@ -882,3 +882,84 @@ button:disabled {
   text-align: center;
   color: var(--texto-suave);
 }
+
+/* ---------- nome do jogador ---------- */
+
+.nome-jogador {
+  max-width: 40%;
+  padding: 4px 12px;
+  font-size: 14px;
+  border-width: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nome-jogador.sem-nome {
+  color: var(--texto-suave);
+  border-style: dashed;
+}
+
+/* barra do topo: Convidar e tema ficam inteiros; o nome encolhe com "…" */
+.barra {
+  gap: 6px;
+}
+
+.barra .convidar,
+.barra .tema {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.barra .nome-jogador {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: none;
+}
+
+/* ---------- janela para editar o nome ---------- */
+
+.janela {
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: calc(80px + env(safe-area-inset-top)) 20px 20px;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.janela-caixa {
+  width: 100%;
+  max-width: 360px;
+  padding: 20px;
+  border-radius: 16px;
+  background: var(--superficie);
+  color: var(--texto);
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+}
+
+.janela-caixa h2 {
+  margin: 0 0 4px;
+  font-size: 20px;
+}
+
+.janela-caixa input {
+  width: 100%;
+  height: 46px;
+  margin: 12px 0 16px;
+  padding: 0 12px;
+  border: 2px solid var(--borda);
+  border-radius: 10px;
+  font-size: 18px;
+  text-align: left;
+  background: var(--fundo);
+}
+
+.janela-caixa input:focus {
+  border-color: var(--destaque);
+  box-shadow: none;
+  background: var(--fundo);
+}

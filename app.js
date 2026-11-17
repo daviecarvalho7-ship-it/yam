@@ -536,7 +536,7 @@ function salvarPartidaAtual() {
     existente.valores = { ...state };
   } else {
     const id = Date.now();
-    historico.unshift({ id, data: new Date().toISOString(), total, valores: { ...state } });
+    historico.unshift({ id, data: new Date().toISOString(), total, valores: { ...state }, nome: nomeJogador || undefined });
     guardarPartidaSalvaId(id);
   }
   salvarHistorico();
@@ -561,6 +561,7 @@ function mostrarFimDeJogo(recordeAnterior) {
   const primeira = recordeAnterior === null;
   const novoRecorde = !primeira && geral > recordeAnterior;
 
+  document.getElementById("fim-titulo").textContent = nomeJogador ? `Fim de jogo, ${nomeJogador}!` : "Fim de jogo!";
   document.getElementById("fim-total").textContent = geral;
   document.getElementById("fim-recorde").textContent =
     primeira ? "Sua primeira partida salva! 🎉"
@@ -595,7 +596,7 @@ function retanguloArredondado(ctx, x, y, w, h, r) {
 }
 
 // Desenha o cartão do resultado (1080 x 1350, bom para WhatsApp) e devolve um PNG.
-function gerarImagemResultado(valores, total, dataIso, selo) {
+function gerarImagemResultado(valores, total, dataIso, selo, nome = "") {
   const { calculados } = calcularTotais(valores);
   const bonus = [0, 1, 2, 3].filter(col => calculados[`7-${col}`] > 0).length;
   const yams = [0, 1, 2, 3].filter(col => Number(valores[`15-${col}`]) > 0).length;
@@ -634,7 +635,7 @@ function gerarImagemResultado(valores, total, dataIso, selo) {
   ctx.textAlign = "center";
   ctx.font = fonte(500, 40);
   ctx.fillStyle = "rgba(255,255,255,0.8)";
-  ctx.fillText(data, W / 2, 275);
+  ctx.fillText(nome ? `${nome}  ·  ${data}` : data, W / 2, 275);
 
   // total
   ctx.fillStyle = selo ? "#c98a00" : NAVY;
@@ -707,7 +708,7 @@ async function compartilharImagem(blob, dataIso) {
 async function compartilharFimDeJogo() {
   if (!ultimoResultado) return;
   const r = ultimoResultado;
-  const blob = await gerarImagemResultado(r.valores, r.total, r.data, r.novoRecorde ? "🏆 Novo recorde!" : "");
+  const blob = await gerarImagemResultado(r.valores, r.total, r.data, r.novoRecorde ? "🏆 Novo recorde!" : "", nomeJogador);
   await compartilharImagem(blob, r.data);
 }
 
@@ -715,7 +716,7 @@ async function compartilharPartidaAberta() {
   if (!partidaAberta) return;
   const p = partidaAberta;
   const ehRecorde = historico.length > 1 && p.total === Math.max(...historico.map(h => h.total));
-  const blob = await gerarImagemResultado(p.valores, p.total, p.data, ehRecorde ? "🏆 Meu recorde!" : "");
+  const blob = await gerarImagemResultado(p.valores, p.total, p.data, ehRecorde ? "🏆 Meu recorde!" : "", p.nome || nomeJogador);
   await compartilharImagem(blob, p.data);
 }
 
@@ -1122,6 +1123,41 @@ function desfazer() {
   piscarCasa(jogada.key);
 }
 
+// ---------- nome do jogador ----------
+
+const CHAVE_NOME = "yam-nome";
+const TAMANHO_MAX_NOME = 20;
+let nomeJogador = ler(CHAVE_NOME, "");
+
+function mostrarNome() {
+  const botao = document.getElementById("botao-nome");
+  botao.textContent = nomeJogador ? `👤 ${nomeJogador}` : "👤 Seu nome";
+  botao.classList.toggle("sem-nome", !nomeJogador);
+}
+
+// Abre a janelinha para digitar o nome.
+function editarNome() {
+  const campo = document.getElementById("campo-nome");
+  campo.value = nomeJogador;
+  document.getElementById("janela-nome").hidden = false;
+  campo.focus();
+  campo.select();
+}
+
+function fecharJanelaNome() {
+  document.getElementById("janela-nome").hidden = true;
+}
+
+function salvarNome(evento) {
+  evento.preventDefault();
+  const digitado = document.getElementById("campo-nome").value;
+  nomeJogador = digitado.trim().replace(/\s+/g, " ").slice(0, TAMANHO_MAX_NOME);
+  if (nomeJogador) localStorage.setItem(CHAVE_NOME, JSON.stringify(nomeJogador));
+  else localStorage.removeItem(CHAVE_NOME);
+  mostrarNome();
+  fecharJanelaNome();
+}
+
 // ---------- tema claro / escuro ----------
 
 const sistemaEscuro = window.matchMedia("(prefers-color-scheme: dark)");
@@ -1150,6 +1186,7 @@ function alternarTema() {
 sistemaEscuro.addEventListener("change", atualizarBotaoTema);
 atualizarBotaoTema();
 atualizarBotaoDesfazer();
+mostrarNome();
 
 // O total guardado de cada partida é sempre refeito a partir da tabela dela,
 // para nunca ficar diferente do TOTAL GERAL mostrado ao abrir a partida.
