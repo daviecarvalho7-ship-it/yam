@@ -574,17 +574,50 @@ const partidaCompleta = () =>
 function verificarFimDeJogo() {
   if (!partidaCompleta()) return;
 
-  // partida em família: salva, avisa a família e espera os outros
-  if (window.familia && familia.ativa() && !familia.revelada()) {
+  // em sala: salva e espera os outros. O resultado pessoal só aparece
+  // depois do pódio (ao fechar o pódio, ver aposPodio).
+  if (window.familia && familia.ativa()) {
     salvarPartidaAtual();
-    familia.aoTerminar();
+    if (!familia.revelada()) familia.aoTerminar();
+    else familia.registrarResultado();
     return;
   }
 
-  const outras = historico.filter(p => p.id !== partidaSalvaId).map(p => p.total);
-  const recordeAnterior = outras.length ? Math.max(...outras) : null;
+  const recordeAnterior = recordeSemAPartidaAtual();
   salvarPartidaAtual();
   mostrarFimDeJogo(recordeAnterior);
+}
+
+function recordeSemAPartidaAtual() {
+  const outras = historico.filter(p => p.id !== partidaSalvaId).map(p => p.total);
+  return outras.length ? Math.max(...outras) : null;
+}
+
+// Ao fechar o pódio da sala: mostra o resultado pessoal (se este jogador terminou).
+function aposPodio() {
+  if (!partidaCompleta() || !entradaDaPartidaAtual()) return;
+  mostrarFimDeJogo(recordeSemAPartidaAtual());
+}
+
+// Guarda na partida do histórico como foi o resultado da sala.
+function registrarResultadoSala(sala) {
+  const entrada = entradaDaPartidaAtual();
+  if (!entrada || entrada.total !== sala.total) return;
+  delete sala.total;
+  entrada.sala = sala;
+  salvarHistorico();
+}
+
+// "🏆 Você venceu (sala de 4)" / "🏆 Maria venceu · você ficou em 2º"
+function textoDaSala(sala) {
+  if (!sala) return "";
+  const outros = sala.vencedores.filter(n => n !== sala.meuNome);
+  if (sala.posicao === 1) {
+    return outros.length
+      ? `🏆 Empate em 1º com ${outros.join(" e ")}`
+      : `🏆 Você venceu (sala de ${sala.jogadores})`;
+  }
+  return `🏆 ${sala.vencedores.join(" e ")} venceu · você ficou em ${sala.posicao}º`;
 }
 
 function mostrarFimDeJogo(recordeAnterior) {
@@ -867,9 +900,14 @@ function abrirHistorico() {
       data.textContent = formatarData(partida.data);
       const total = document.createElement("strong");
       total.textContent = `${partida.total} pts`;
-      if (partida.total === recorde) total.textContent += " 🏆";
+      if (partida.total === recorde) total.textContent += " ⭐";
 
-      botao.append(data, total);
+      const esquerda = elemento("span", "item-info");
+      esquerda.appendChild(data);
+      if (partida.sala) {
+        esquerda.appendChild(elemento("small", partida.sala.posicao === 1 ? "sala-info venceu" : "sala-info", textoDaSala(partida.sala)));
+      }
+      botao.append(esquerda, total);
       botao.addEventListener("click", () => abrirPartida(partida.id));
       li.appendChild(botao);
       lista.appendChild(li);
@@ -884,6 +922,9 @@ function abrirPartida(id) {
   if (!partidaAberta) return;
 
   document.getElementById("titulo-partida").textContent = formatarData(partidaAberta.data);
+  const infoSala = document.getElementById("sala-partida");
+  infoSala.textContent = textoDaSala(partidaAberta.sala);
+  infoSala.hidden = !partidaAberta.sala;
   const tbody = document.getElementById("tableBody-partida");
   montarTabela(tbody, partidaAberta.valores, false);
   atualizarTotais(tbody, document.getElementById("total-geral-partida"), partidaAberta.valores);
@@ -993,10 +1034,18 @@ function abrirEstatisticas() {
   const partidasComYam = completas.filter(p => [0, 1, 2, 3].some(col => Number(p.valores[`15-${col}`]) > 0)).length;
   const pct = (a, b) => Math.round((100 * a) / b);
 
-  const itens = [
+  const itens = [];
+  const emSala = completas.filter(p => p.sala);
+  if (emSala.length) {
+    const vitorias = emSala.filter(p => p.sala.posicao === 1).length;
+    const podios = emSala.filter(p => p.sala.posicao <= 3).length;
+    itens.push(["🏆", `${vitorias} vitória${vitorias === 1 ? "" : "s"} em sala`,
+      `em ${emSala.length} partida${emSala.length === 1 ? "" : "s"} em sala · ${podios} pódio${podios === 1 ? "" : "s"}`]);
+  }
+  itens.push(
     ["🎯", `Bônus em ${pct(comBonus, colunasTotal)}% das colunas`, `${comBonus} de ${colunasTotal}`],
     ["🎲", `${yams} YAM${yams === 1 ? "" : "s"} feitos`, `em ${partidasComYam} de ${completas.length} partidas`],
-  ];
+  );
 
   // jogadas mais riscadas
   const riscos = LINHAS_JOGO.map(l => ({
@@ -1071,7 +1120,7 @@ function graficoEvolucao(partidas) {
     x: Math.min(Math.max(x(iRecorde), M.esq + 30), W - M.dir - 30), y: y(recorde) - 10,
     class: "rotulo-recorde", "text-anchor": "middle"
   });
-  rotulo.textContent = `🏆 ${recorde}`;
+  rotulo.textContent = `⭐ ${recorde}`;
 
   // dica ao tocar
   const dica = elemento("div", "dica-grafico");

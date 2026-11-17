@@ -373,7 +373,7 @@ button.perigo {
 .topo button {
   position: absolute;
   left: 0;
-  top: 50%;
+  top: 22px; /* meio da linha do título */
   transform: translateY(-50%);
   padding: 6px 12px;
 }
@@ -439,6 +439,34 @@ button.perigo {
   border: 1px solid var(--borda);
   font-size: 16px;
   text-align: left;
+}
+
+.item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sala-info {
+  color: var(--texto-suave);
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sala-info.venceu {
+  color: var(--texto);
+  font-weight: 600;
+}
+
+.sala-partida {
+  flex-basis: 100%;
+  margin: 0;
+  text-align: center;
+  color: var(--texto-suave);
+  font-size: 14px;
 }
 
 .lista-historico .vazio {
@@ -619,6 +647,7 @@ tbody tr td.piscar {
 .dica-bonus.perdido {
   color: var(--perigo);
   opacity: 0.8;
+  white-space: normal; /* "sem bônus" quebra em duas linhas e não vaza da casa */
 }
 
 tr.total td.bonus-ok {

@@ -30,6 +30,8 @@ let partida = null;                    // último estado recebido do banco
 let pararEscuta = null;
 let ultimoEnvio = "";
 let podioMostrado = false;
+let ultimoPodio = null;                // dados do último pódio (para compartilhar)
+let resultadoSala = null;              // colocação deste jogador no último pódio
 
 // ---------- utilidades ----------
 
@@ -432,8 +434,138 @@ function mostrarPodio() {
   });
   lista.hidden = lista.children.length === 0;
 
+  ultimoPodio = {
+    codigo: sessao.codigo,
+    titulo: $("podio-titulo").textContent,
+    terminaram: terminaram.map(j => ({ nome: j.nome, total: j.total, posicao: posicao(j) })),
+    naoTerminaram: naoTerminaram.map(j => j.nome)
+  };
+
+  // guarda na partida do histórico deste jogador como foi a sala
+  const eu = terminaram.find(j => j.uid === uid);
+  resultadoSala = eu ? {
+    codigo: sessao.codigo, total: eu.total, posicao: posicao(eu), meuNome: eu.nome,
+    jogadores: jogadores.length, vencedores: vencedores.map(v => v.nome)
+  } : null;
+  registrarResultado();
+
   $("podio").hidden = false;
   confetePodio();
+}
+
+// O pódio pode abrir antes de a partida ir para o histórico (último a terminar):
+// por isso o app chama isto de novo depois de salvar.
+function registrarResultado() {
+  if (resultadoSala) registrarResultadoSala({ ...resultadoSala });
+}
+
+// Corta o texto com "…" para caber na largura.
+function caber(ctx, texto, largura) {
+  if (ctx.measureText(texto).width <= largura) return texto;
+  while (texto.length > 1 && ctx.measureText(texto + "…").width > largura) texto = texto.slice(0, -1);
+  return texto + "…";
+}
+
+// Imagem do pódio (1080 x 1350), no mesmo estilo do cartão de resultado.
+function gerarImagemPodio(p) {
+  const W = 1080, H = 1350;
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d");
+  const fonte = (peso, tam) => `${peso} ${tam}px system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif`;
+  const NAVY = "#1f3a5f", FUNDO = "#f3f3f0", TEXTO = "#1d1d1f", SUAVE = "#66666a", OURO = "#c98a00";
+  const data = new Date().toLocaleDateString("pt-BR");
+
+  ctx.fillStyle = FUNDO;
+  ctx.fillRect(0, 0, W, H);
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  // faixa do topo
+  ctx.fillStyle = NAVY;
+  ctx.fillRect(0, 0, W, 230);
+  ctx.fillStyle = "#ffffff";
+  ctx.font = fonte(800, 100);
+  ctx.fillText("YAM", W / 2, 100);
+  ctx.font = fonte(500, 40);
+  ctx.fillStyle = "rgba(255,255,255,0.8)";
+  ctx.fillText(data, W / 2, 185);
+
+  // lista de quem ficou do 4º em diante e de quem não terminou
+  const linhas = [
+    ...p.terminaram.slice(3).map(j => [`${j.posicao}º`, j.nome, `${j.total} pts`]),
+    ...p.naoTerminaram.map(n => ["–", n, "não terminou"])
+  ];
+  const cabem = linhas.length > 5 ? 4 : 5;
+  const alturaLista = (Math.min(linhas.length, cabem) + (linhas.length > cabem ? 1 : 0)) * 54;
+  // com lista curta (ou nenhuma), desce título e pódio para não sobrar espaço embaixo
+  const desce = Math.round((5 * 54 - alturaLista) / 2);
+
+  // quem venceu
+  ctx.fillStyle = TEXTO;
+  ctx.font = fonte(800, 64);
+  ctx.fillText(caber(ctx, p.titulo, W - 100), W / 2, 330 + desce);
+
+  // degraus: 2º à esquerda, 1º no meio, 3º à direita
+  const alturas = { 1: 360, 2: 260, 3: 190 };
+  const medalhas = { 1: "🥇", 2: "🥈", 3: "🥉" };
+  const larg = 300, gap = 30, x0 = (W - (3 * larg + 2 * gap)) / 2, base = 1010 + desce;
+  [1, 0, 2].forEach((i, coluna) => {
+    const j = p.terminaram[i];
+    if (!j) return;
+    const h = alturas[Math.min(j.posicao, 3)];
+    const x = x0 + coluna * (larg + gap), topo = base - h;
+    ctx.fillStyle = j.posicao === 1 ? OURO : NAVY;
+    retanguloArredondado(ctx, x, topo, larg, h + 20, 22);
+    ctx.fill();
+    ctx.fillStyle = "#ffffff";
+    ctx.font = fonte(800, 84);
+    ctx.fillText(`${j.posicao}º`, x + larg / 2, topo + 75);
+    ctx.font = fonte(400, 84);
+    ctx.fillText(medalhas[j.posicao] || "", x + larg / 2, topo - 190);
+    ctx.fillStyle = TEXTO;
+    ctx.font = fonte(700, 46);
+    ctx.fillText(caber(ctx, j.nome, larg - 10), x + larg / 2, topo - 100);
+    ctx.fillStyle = SUAVE;
+    ctx.font = fonte(500, 40);
+    ctx.fillText(`${j.total} pts`, x + larg / 2, topo - 45);
+  });
+  // chão do pódio
+  ctx.fillStyle = FUNDO;
+  ctx.fillRect(0, base, W, H - base);
+  ctx.fillStyle = "#c8c8c4";
+  ctx.fillRect(x0 - 20, base, 3 * larg + 2 * gap + 40, 6);
+
+  // do 4º em diante e quem não terminou
+  linhas.slice(0, cabem).forEach(([pos, nome, pts], k) => {
+    const y = base + 55 + k * 54;
+    ctx.textAlign = "left";
+    ctx.fillStyle = SUAVE;
+    ctx.font = fonte(700, 38);
+    ctx.fillText(pos, 140, y);
+    ctx.fillStyle = TEXTO;
+    ctx.font = fonte(600, 38);
+    ctx.fillText(caber(ctx, nome, 520), 230, y);
+    ctx.textAlign = "right";
+    ctx.fillStyle = pts === "não terminou" ? SUAVE : TEXTO;
+    ctx.font = fonte(pts === "não terminou" ? 500 : 700, 38);
+    ctx.fillText(pts, W - 140, y);
+  });
+  if (linhas.length > cabem) {
+    ctx.textAlign = "center";
+    ctx.fillStyle = SUAVE;
+    ctx.font = fonte(500, 36);
+    ctx.fillText(`e mais ${linhas.length - cabem}`, W / 2, base + 55 + cabem * 54);
+  }
+
+  return new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+}
+
+async function compartilharPodio() {
+  if (!ultimoPodio) return;
+  const blob = await gerarImagemPodio(ultimoPodio);
+  await compartilharImagem(blob, new Date().toISOString());
 }
 
 function confetePodio() {
@@ -458,13 +590,14 @@ function fecharPodio() {
   guardarSessao(null);
   partida = null;
   atualizarBarra();
+  aposPodio(); // depois do pódio, o resultado pessoal
 }
 
 // ---------- ligação com o resto do app ----------
 
 window.familia = {
   abrir, fecharJanela, acaoJanela, sair, confirmarSair, compartilharCodigo,
-  aoTerminar, fecharEspera, fecharPodio, sincronizar,
+  aoTerminar, fecharEspera, fecharPodio, compartilharPodio, sincronizar, registrarResultado,
   ativa: () => !!sessao,
   revelada: () => !!(partida && (partida.revelada || partida.encerrada))
 };
